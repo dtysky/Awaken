@@ -1,0 +1,59 @@
+{
+  "name": "awaken",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "devDependencies": {
+    "@tauri-apps/cli": "1.1.0",
+    "@types/react": "^18.0.20",
+    "@types/react-dom": "^18.0.6",
+    "css-loader": "^6.7.1",
+    "express": "^4.18.2",
+    "html-webpack-plugin": "^4.5.0",
+    "mini-css-extract-plugin": "^2.6.1",
+    "postcss-loader": "^7.0.1",
+    "postcss-preset-env": "^7.8.3",
+    "raw-loader": "^4.0.2",
+    "react-transition-group": "^4.4.5",
+    "sass": "^1.56.1",
+    "sass-loader": "^13.1.0",
+    "sass-resources-loader": "^2.2.5",
+    "ts-loader": "^9.2.2",
+    "typescript": "^4.7.2",
+    "typescript-plugin-css-modules": "^3.4.0",
+    "url-loader": "^4.1.0",
+    "webdav-server": "^2.6.2",
+    "webpack": "^5.11.0",
+    "webpack-cli": "^4.3.0",
+    "webpack-dev-server": "^4.11.0"
+  },
+  "scripts": {
+    "init": "npm install --force",
+    "dev": "webpack serve --config webpack.config.js",
+    "dev-desktop": "cd ./platforms/desktop && tauri dev",
+    "copy-desktop": "d=platforms/desktop/assets && rm -rf $d && mkdir $d && cp dist/* $d",
+    "copy-android": "d=platforms/android/app/src/main/assets && rm -rf $d && mkdir $d && cp dist/* $d",
+    "copy-ios": "d=platforms/ios/Awaken/assets && rm -rf $d && mkdir $d && cp dist/* $d",
+    "build": "rm -rf dist && webpack --config webpack.config.js --env production=true && npm run copy-desktop && npm run copy-android && npm run copy-ios",
+    "release-desktop": "cd ./platforms/desktop && tauri build",
+    "release": "npm run build && npm run release-desktop"
+  },
+  "author": {
+    "name": "dtysky",
+    "email": "dtysky@outlook.com",
+    "url": "https://dtysky.moe"
+  },
+  "license": "LGPLv3",
+  "dependencies": {
+    "@tauri-apps/api": "1.1.0",
+    "@tauri-apps/cli-linux-x64-gnu": "^1.2.2",
+    "ajax-hook": "^2.1.3",
+    "color-hash": "^2.0.1",
+    "epubjs": "0.3.93",
+    "hana-ui": "^1.3.4",
+    "js-md5": "^0.7.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "webdav": "^4.11.0"
+  }
+}

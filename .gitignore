@@ -1,0 +1,9 @@
+node_modules
+package-lock.json
+dist
+release
+platforms/**/assets
+**/*/dist
+test/*
+!test/*.epub
+!test/*.html

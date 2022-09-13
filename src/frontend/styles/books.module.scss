@@ -1,0 +1,131 @@
+/**
+ * @File   : books.module.scss.scss
+ * @Author : dtysky (dtysky@outlook.com)
+ * @Link   : dtysky.moe
+ * @Date   : 2022/9/18 16:26:16
+ */
+.books {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.menu {
+  position: absolute;
+  width: 90%;
+  height: 3rem;
+  left: 5%;
+  top: 1rem;
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  font-size: 1.4rem;
+}
+
+.menuItem {
+  margin: 0 0.3rem;
+  // color: #4c9;
+  color: #444;
+  font-size: 1rem;
+  padding: 1rem 0.6rem;
+
+  >i {
+    font-size: 1rem;
+  }
+}
+
+.list {
+  position: absolute;
+  width: 90%;
+  left: 5%;
+  top: 4rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.book {
+  position: relative;
+  width: 25vw;
+  height: 36vw;
+  max-width: 15rem;
+  max-height: 20rem;
+  margin-top: 1rem;
+  margin-right: 4vw;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+}
+
+.bookBg {
+  width: 100%;
+  height: 100%;
+}
+
+.bookActions {
+  font-size: 1rem !important;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 4px;
+  font-weight: 800;
+  background-color: rgba(#fff, 0.4);
+  border-radius: 4px;
+  color: #111;
+
+  >i {
+    padding: 4px;
+  }
+}
+
+.bookInfo {
+  position: absolute;
+  width: 100%;
+  bottom: 1rem;
+  text-align: center;
+  color: white;
+}
+
+.bookName {
+  font-size: 1.2em;
+}
+
+.bookAuthor {
+  font-size: 1rem;
+  margin-top: 0.2rem;
+}
+
+.about {
+  text-align: center;
+}
+
+.aboutLogo {
+  display: block;
+  width: 60%;
+  min-width: 240px;
+  margin: auto;
+}
+
+.aboutSlogan {
+  margin-top: 2rem;
+  line-height: 1.4rem;
+}
+
+.aboutLinks {
+  margin-top: 1rem;
+
+  >a {
+    color: #6c9;
+    margin: 0.6rem;
+    text-decoration: none;
+  }
+}
+
+.aboutCopyright {
+  margin-top: 1rem;
+  line-height: 1.4rem;
+
+  >a {
+    color: #6c9;
+  }
+}
