@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "target": "ES5",
+    "noImplicitAny": false,
+    "module": "commonjs",
+    "allowJs": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "noFallthroughCasesInSwitch": true,
+    "removeComments": true,
+    "pretty": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "lib": [
+    "es5",
+    "es2015.promise",
+    "es2016",
+    "dom"
+  ]
+}
