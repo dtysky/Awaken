@@ -6,12 +6,11 @@
  */
 export type TBookType = 'Page' | 'Position';
 
-export interface IBooks {
-  [hash: string]: {
-    type: TBookType;
-    filePath: string;
-    progress: number;
-  };
+export interface IBook {
+  hash: string;
+  type: TBookType;
+  filePath: string;
+  progress: number;
 }
 
 // highlights and annotations
