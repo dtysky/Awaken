@@ -9,6 +9,9 @@ export type TBookType = 'Page' | 'Position';
 export interface IBook {
   hash: string;
   type: TBookType;
+  name: string;
+  author: string;
+  cover?: string;
   filePath: string;
   progress: number;
 }

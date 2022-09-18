@@ -16,13 +16,14 @@
     "raw-loader": "^4.0.2",
     "ts-loader": "^9.2.2",
     "typescript": "^3.9.5",
+    "typescript-plugin-css-modules": "^3.4.0",
     "url-loader": "^2.1.0",
     "webpack": "^5.11.0",
     "webpack-cli": "^4.3.0",
     "webpack-dev-server": "^4.11.0"
   },
   "scripts": {
-    "dev-desktop": "webpack serve --config webpack.config.js",
+    "dev": "webpack serve --config webpack.config.js",
     "start-desktop": "cd ./platforms/desktop && tauri dev"
   },
   "author": {
@@ -32,6 +33,7 @@
   },
   "license": "LGPLv3",
   "dependencies": {
+    "color-hash": "^2.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }
