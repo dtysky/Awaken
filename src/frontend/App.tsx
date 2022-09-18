@@ -49,8 +49,8 @@ export default function App() {
       <Books
         books={config.books}
         onSelect={index => {
-          setState('Reader');
           setCurrent(index);
+          setState('Reader');
         }}
       />
     );
@@ -58,7 +58,8 @@ export default function App() {
 
   return (
     <Reader
-      filePath={`${config.folder}/${config.books[current].filePath}`}
+      filePath={config.books[current].filePath}
+      name={config.books[current].name}
       type={config.books[current].type}
       progress={config.books[current].progress}
       onUpdateProgress={progress => {

@@ -23,7 +23,9 @@ export default function Books(props: IBooksProps) {
           <Book
             key={book.hash}
             book={book}
-            onSelect={() => console.log(index)}
+            onSelect={() => {
+              props.onSelect(index)
+            }}
           />
         ))}
       </div>

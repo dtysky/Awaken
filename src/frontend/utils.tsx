@@ -56,13 +56,13 @@ export async function saveBooks(folder: string, books: IBook[]) {
 }
 
 export interface IBookContent {
-  text: string;
+  content: Uint8Array;
   notes: IBookNote[];
 }
 
 export async function loadBook(filePath: string): Promise<IBookContent> {
   return {
-    text: '',
+    content: await bk.worker.fs.readFile(filePath, 'binary', 'Books') as Uint8Array,
     notes: []
   }
 }
