@@ -22,7 +22,7 @@ export async function loadConfig(): Promise<IConfig> {
     books: [
       {
         hash: '1',
-        type: 'Position',
+        type: 'MOBI',
         name: '二十九',
         author: '瞬光寂暗',
         cover: '',
@@ -31,7 +31,7 @@ export async function loadConfig(): Promise<IConfig> {
       },
       {
         hash: '2',
-        type: 'Position',
+        type: 'EPUB',
         name: '我为什么写作',
         author: '瞬光寂暗',
         cover: '',
@@ -40,7 +40,7 @@ export async function loadConfig(): Promise<IConfig> {
       },
       {
         hash: '3',
-        type: 'Page',
+        type: 'PDF',
         name: '乡土中国',
         author: '费孝通',
         cover: '',
@@ -56,13 +56,13 @@ export async function saveBooks(folder: string, books: IBook[]) {
 }
 
 export interface IBookContent {
-  content: Uint8Array;
+  content: ArrayBuffer;
   notes: IBookNote[];
 }
 
 export async function loadBook(filePath: string): Promise<IBookContent> {
   return {
-    content: await bk.worker.fs.readFile(filePath, 'binary', 'Books') as Uint8Array,
+    content: await bk.worker.fs.readFile(filePath, 'binary', 'Books') as ArrayBuffer,
     notes: []
   }
 }

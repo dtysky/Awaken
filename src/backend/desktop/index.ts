@@ -52,7 +52,7 @@ export const worker: IWorker = {
 
       return encoding === 'utf8' ?
         fs.readTextFile(fp, base && {dir: base}) as Promise<string> :
-        fs.readBinaryFile(fp, base && {dir: base}) as Promise<Uint8Array>;
+        (await fs.readBinaryFile(fp, base && {dir: base})).buffer;
     },
     async writeFile(filePath: string, content: string | ArrayBuffer, baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);

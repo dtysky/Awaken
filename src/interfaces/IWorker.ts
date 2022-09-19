@@ -15,7 +15,7 @@ export interface ILogger {
 export type TBaseDir = 'Books' | 'AppData' | 'Tmp' | 'Log';
 
 export interface IFileSystem {
-  readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir): Promise<string | Uint8Array>;
+  readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir): Promise<string | ArrayBuffer>;
   writeFile(filePath: string, content: string | ArrayBuffer, baseDir: TBaseDir): Promise<void>;
   removeFile(filePath: string, baseDir: TBaseDir): Promise<void>;
   readDir(dirPath: string, baseDir: TBaseDir): Promise<{path: string, isDir: boolean}[]>;

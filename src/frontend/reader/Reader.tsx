@@ -5,37 +5,40 @@
  * @Date   : 2022/9/16 23:11:48
  */
 import * as React from 'react';
-import {TBookType} from '../../interfaces/protocols';
 import {IBookContent, loadBook} from '../utils';
 
 import css from '../styles/reader.module.less';
+import {Viewer} from './Viewer';
+import {TBookType} from '../../interfaces/protocols';
 
 export interface IReaderProps {
-  type: TBookType;
   name: string;
+  type: TBookType;
   filePath: string;
   progress: number;
   onUpdateProgress(progress: number): void;
   onClose(): void;
 }
 
+type TState = 'Init' | 'Loading' | 'Ready';
+
 export default function Reader(props: IReaderProps) {
-  const [ready, setReady] = React.useState<boolean>(false);
+  const [state, setState] = React.useState<TState>('Init');
   const [book, setBook] = React.useState<IBookContent>();
 
   React.useEffect(() => {
-    if (!ready) {
+    if (state === 'Init') {
+      setState('Loading');
       loadBook(props.filePath).then(content => {
-        console.log(content);
         setBook(content);
-        setReady(true);
+        setState('Ready');
       }).catch(error => {
         console.error(error);
       })
     }
   });
 
-  if (!ready) {
+  if (state !== 'Ready') {
     return (
       <div className={css.ready}>
         Loading {props.name}...
@@ -45,7 +48,10 @@ export default function Reader(props: IReaderProps) {
 
   return (
     <div className={css.reader}>
-      {props.name}
+      <Viewer
+        type={props.type}
+        content={book.content}
+      />
     </div>
   );
 }

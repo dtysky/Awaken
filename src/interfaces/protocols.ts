@@ -4,7 +4,7 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:44:34
  */
-export type TBookType = 'Page' | 'Position';
+export type TBookType = 'EPUB' | 'MOBI' | 'PDF';
 
 export interface IBook {
   hash: string;
