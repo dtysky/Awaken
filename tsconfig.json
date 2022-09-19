@@ -25,6 +25,9 @@
     "src/**/*.tsx",
     "src/**/*.d.ts"
   ],
+  "exclude": [
+    "node_modules"
+  ],
   "lib": [
     "es5",
     "es2015.promise",
