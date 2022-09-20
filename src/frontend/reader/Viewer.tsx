@@ -8,10 +8,13 @@ import * as React from 'react';
 import ePub from 'epubjs';
 
 import css from '../styles/reader.module.less';
-import { TBookType } from '../../interfaces/protocols';
+import {TBookType} from '../../interfaces/protocols';
+import {IBookIndex} from './types';
 
 interface IViewerCommonProps {
   content: ArrayBuffer;
+  onLoad(indexes: IBookIndex[]): void;
+  index?: IBookIndex;
 }
 
 export interface IViewerProps extends IViewerCommonProps {
@@ -20,7 +23,13 @@ export interface IViewerProps extends IViewerCommonProps {
 
 export function Viewer(props: IViewerProps) {
   if (props.type === 'EPUB') {
-    return <EPUBViewer content={props.content} />
+    return (
+      <EPUBViewer
+        content={props.content}
+        onLoad={props.onLoad}
+        index={props.index}
+      />
+    );
   }
 
   return null;
@@ -29,26 +38,48 @@ export function Viewer(props: IViewerProps) {
 type TState = 'Init' | 'Loading' | 'Ready';
 
 
+function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
+  const sub: IBookIndex[] = [];
+  res.push({id: toc.id, label: toc.label, children: sub});
+  
+  toc.subitems?.forEach(t => convertEPUBIndex(t, sub));
+}
+
+let preIndex: IBookIndex;
+let rendition: ePub.Rendition;
+let tocByBd: {[id: string]: number};
 function EPUBViewer(props: IViewerCommonProps) {
   const [state, setState] = React.useState<TState>('Init');
 
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');
-      console.log(props.content)
       const book = ePub(props.content);
-      console.log(book);
-      const rendition = book.renderTo('epub-viewer', {
-        width: window.innerWidth - 40,
-        height: window.innerHeight - 40,
+      rendition = book.renderTo('epub-viewer', {
+        width: '100%',
+        height: '100%',
         method: 'default'
       } as any);
-      console.log(rendition);
+
+      book.loaded.navigation.then(nav => {
+        // @ts-ignore
+        tocByBd = nav.tocById;
+        const indexes: IBookIndex[] = [];
+        nav.toc.forEach(t => {
+          convertEPUBIndex(t, indexes);
+        });
+        props.onLoad(indexes);
+      })
+
       rendition.display().then(() => {
-        console.log('ready', book)
         setState('Ready');
-        rendition.next();
       });
+    }
+
+    if (preIndex !== props.index) {
+      preIndex = props.index;
+      console.log(rendition, preIndex, tocByBd[preIndex.id])
+      rendition?.moveTo(tocByBd[preIndex.id]);
     }
   });
 

@@ -18,8 +18,12 @@ export interface IBook {
 
 // highlights and annotations
 export interface IBookNote {
+  // used in PDF
   page: number;
+  // used in EPUB and MOBI
   start: number;
+  // if zero, is bookmark
   length: number;
+  // default to ''
   annotation: string;
 }
