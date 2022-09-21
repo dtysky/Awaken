@@ -13,7 +13,7 @@ import {IBookIndex} from './types';
 
 interface IViewerCommonProps {
   content: ArrayBuffer;
-  onLoad(indexes: IBookIndex[]): void;
+  onLoad(indexes: IBookIndex[], currentIndex: IBookIndex): void;
   index?: IBookIndex;
 }
 
@@ -38,16 +38,17 @@ export function Viewer(props: IViewerProps) {
 type TState = 'Init' | 'Loading' | 'Ready';
 
 
+let preIndex: IBookIndex;
+let rendition: ePub.Rendition;
+let idToHref: {[id: string]: string};
 function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
   const sub: IBookIndex[] = [];
   res.push({id: toc.id, label: toc.label, children: sub});
+  idToHref[toc.id] = toc.href;
   
   toc.subitems?.forEach(t => convertEPUBIndex(t, sub));
 }
 
-let preIndex: IBookIndex;
-let rendition: ePub.Rendition;
-let tocByBd: {[id: string]: number};
 function EPUBViewer(props: IViewerCommonProps) {
   const [state, setState] = React.useState<TState>('Init');
 
@@ -62,13 +63,13 @@ function EPUBViewer(props: IViewerCommonProps) {
       } as any);
 
       book.loaded.navigation.then(nav => {
-        // @ts-ignore
-        tocByBd = nav.tocById;
+        console.log(nav)
+        idToHref = {};
         const indexes: IBookIndex[] = [];
         nav.toc.forEach(t => {
           convertEPUBIndex(t, indexes);
         });
-        props.onLoad(indexes);
+        props.onLoad(indexes, indexes[0]);
       })
 
       rendition.display().then(() => {
@@ -78,8 +79,8 @@ function EPUBViewer(props: IViewerCommonProps) {
 
     if (preIndex !== props.index) {
       preIndex = props.index;
-      console.log(rendition, preIndex, tocByBd[preIndex.id])
-      rendition?.moveTo(tocByBd[preIndex.id]);
+      console.log(rendition, preIndex, idToHref[preIndex.id])
+      rendition?.display(idToHref[preIndex.id]);
     }
   });
 

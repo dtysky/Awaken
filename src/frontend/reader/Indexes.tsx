@@ -13,6 +13,7 @@ import {IBookIndex} from './types';
 interface IIndexesProps {
   layer?: number;
   indexes: IBookIndex[];
+  current: IBookIndex;
   onSelect(index: IBookIndex): void;
 }
 
@@ -25,7 +26,7 @@ export function Indexes(props: IIndexesProps) {
     <>
       {props.indexes.map(index => (
         <div
-          className={`${css.index} ${css['index-' + (props.layer || 0)]}`}
+          className={`${css.index} ${css['index-' + (props.layer || 0)]} ${props.current.id === index.id && css.indexCurrent}`}
           key={index.id}
           onClick={() => props.onSelect(index)}
         >
@@ -35,6 +36,7 @@ export function Indexes(props: IIndexesProps) {
               key={index.id}
               layer={(props.layer || 0) + 1}
               onSelect={props.onSelect}
+              current={props.current}
               indexes={index.children}
             />
           )}

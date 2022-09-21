@@ -12,6 +12,7 @@ import {Viewer} from './Viewer';
 import {TBookType} from '../../interfaces/protocols';
 import {IBookIndex} from './types';
 import { Indexes } from './Indexes';
+import { Menu } from './Menu';
 
 export interface IReaderProps {
   name: string;
@@ -29,6 +30,7 @@ export default function Reader(props: IReaderProps) {
   const [book, setBook] = React.useState<IBookContent>();
   const [indexes, setIndexes] = React.useState<IBookIndex[]>();
   const [currentIndex, setCurrentIndex] = React.useState<IBookIndex>();
+  const [showMenu, setShowMenu] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -52,19 +54,31 @@ export default function Reader(props: IReaderProps) {
 
   return (
     <div className={css.reader}>
-      <div className={css.indexes}>
-        <div className={css.indexesTop}>目录</div>
-        <Indexes
-          indexes={indexes}
-          onSelect={index => setCurrentIndex(index)}
+      <div className={css.top}>
+        <Menu
+          onSwitch={() => setShowMenu(!showMenu)}
+          onReturn={props.onClose}
         />
       </div>
-      <Viewer
-        type={props.type}
-        index={currentIndex}
-        onLoad={indexes => setIndexes(indexes)}
-        content={book.content}
-      />
+      <div className={css.bottom}>
+        <div className={`${css.indexes} ${showMenu && css.indexesShow}`}>
+          <div className={css.indexesTop}>目录</div>
+          <Indexes
+            indexes={indexes}
+            current={currentIndex}
+            onSelect={index => setCurrentIndex(index)}
+          />
+        </div>
+        <Viewer
+          type={props.type}
+          index={currentIndex}
+          onLoad={(indexes, current) => {
+            setIndexes(indexes);
+            setCurrentIndex(current);
+          }}
+          content={book.content}
+        />
+      </div>
     </div>
   );
 }
