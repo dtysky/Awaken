@@ -12,6 +12,7 @@ import {TBookType} from '../../interfaces/protocols';
 import {IBookIndex} from './types';
 
 interface IPageCtrProps {
+  start: number;
   max: number;
   current: number;
   onChange(progress: number): void;
@@ -25,7 +26,7 @@ export function PageCtr(props: IPageCtrProps) {
   React.useEffect(() => {
     function processEvent(event: KeyboardEvent) {
       if (event.key === 'ArrowLeft') {
-        props.onChange(Math.max(props.current - 1, 1));
+        props.onChange(Math.max(props.current - 1, props.start));
       } else if (event.key === 'ArrowRight') {
         props.onChange(Math.min(props.current + 1, props.max));
       }
@@ -34,20 +35,20 @@ export function PageCtr(props: IPageCtrProps) {
     window.addEventListener('keydown', processEvent);
 
     return () => {
-      console.log('clean')
       window.removeEventListener('keydown', processEvent)
     };
-  }, [props.max]);
+  });
 
   return (
     <div className={css.pageCtr}>
-      <div className={css.pageCtrPre} onClick={() => props.onChange(Math.min(props.current - 1, 1))} />
-      <div className={css.pageCtrNext} onClick={() => props.onChange(Math.max(props.current + 1, props.max))} />
+      <div className={css.pageCtrPre} onClick={() => props.onChange(Math.max(props.current - 1, props.start))} />
+      <div className={css.pageCtrNext} onClick={() => props.onChange(Math.min(props.current + 1, props.max))} />
       <div className={css.pageCtrSlider}>
         <Slider
           size='small'
-          defaultValue={props.current}
-          min={1}
+          showValue={false}
+          value={props.current}
+          min={props.start}
           max={props.max}
           onChange={val => props.onChange(val)}
         />

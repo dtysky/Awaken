@@ -33,6 +33,8 @@ export default function Reader(props: IReaderProps) {
   const [book, setBook] = React.useState<IBookContent>();
   const [indexes, setIndexes] = React.useState<IBookIndex[]>();
   const [currentIndex, setCurrentIndex] = React.useState<IBookIndex>();
+  const [range, setRange] = React.useState<{start: number, max: number}>();
+  const [progress, setProgress] = React.useState<number>(1);
   const [showMenu, setShowMenu] = React.useState<boolean>(false);
 
   React.useEffect(() => {
@@ -84,20 +86,26 @@ export default function Reader(props: IReaderProps) {
         </div>
         <Viewer
           type={props.type}
+          content={book.content}
           index={currentIndex}
-          onLoad={(indexes) => {
+          progress={progress}
+          onLoad={(indexes, start, max) => {
             setIndexes(indexes);
             setCurrentIndex(indexes[0]);
+            setRange({start, max});
           }}
-          content={book.content}
+          onProgress={progress => setProgress(progress)}
         />
-        <PageCtr
-          max={100}
-          current={1}
-          onChange={(progress) => {
-            console.log(progress)
-          }}
-        />
+        {
+          range && (
+            <PageCtr
+              start={range.start}
+              max={range.max}
+              current={progress}
+              onChange={(p) => setProgress(p)}
+            />
+          )
+        }
       </div>
     </div>
   );

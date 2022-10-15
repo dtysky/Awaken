@@ -13,8 +13,10 @@ import {IBookIndex} from './types';
 
 interface IViewerCommonProps {
   content: ArrayBuffer;
-  onLoad(indexes: IBookIndex[]): void;
+  onLoad(indexes: IBookIndex[], start: number, max: number): void;
   index?: IBookIndex;
+  progress: number;
+  onProgress?(progress: number): void;
 }
 
 export interface IViewerProps extends IViewerCommonProps {
@@ -28,6 +30,8 @@ export function Viewer(props: IViewerProps) {
         content={props.content}
         onLoad={props.onLoad}
         index={props.index}
+        progress={props.progress}
+        onProgress={props.onProgress}
       />
     );
   }
@@ -51,6 +55,7 @@ function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
 
 function EPUBViewer(props: IViewerCommonProps) {
   const [state, setState] = React.useState<TState>('Init');
+  const [progress, setProgress] = React.useState<number>(1);
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -63,32 +68,40 @@ function EPUBViewer(props: IViewerCommonProps) {
       } as any);
 
       book.loaded.navigation.then(nav => {
-        console.log(nav)
-        idToHref = {};
-        const indexes: IBookIndex[] = [];
-        nav.toc.forEach(t => {
-          convertEPUBIndex(t, indexes);
+        book.locations.generate(888).then(cfis => {
+          idToHref = {};
+          const indexes: IBookIndex[] = [];
+          nav.toc.forEach(t => {
+            convertEPUBIndex(t, indexes);
+          });
+          props.onLoad(indexes, 1, cfis.length);
+          console.log(cfis)
+          setState('Ready');
         });
-        props.onLoad(indexes);
-      })
-
-      rendition.display().then(() => {
-        setState('Ready');
       });
+    }
+
+    function updateProgress(location) {
+      const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;
+      setProgress(loc);
+      props.onProgress(loc);
+      rendition.off('relocated', updateProgress);
     }
 
     if (preIndex !== props.index) {
       preIndex = props.index;
-      rendition?.display(idToHref[preIndex.id]).then(() => {
-        console.log(rendition.currentLocation())
-      });
+      rendition.on('relocated', updateProgress);
+      rendition?.display(idToHref[preIndex.id]);
+    }
+
+    if (props.progress !== progress) {
+      setProgress(props.progress);
+      rendition.display(rendition.book.locations.cfiFromLocation(props.progress));
     }
   });
 
   return (
-    <div id='epub-viewer' className={css.viewer}>
-
-    </div>
+    <div id='epub-viewer' className={css.viewer} />
   )
 }
 

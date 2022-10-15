@@ -35,6 +35,7 @@ export function Indexes(props: IIndexesProps) {
           <MenuItem
             key={props.subIndex.id}
             value={props.subIndex.id}
+            active={props.current.id === props.subIndex.id}
             onClick={() => props.onSelect(props.subIndex)}
           >
             {props.subIndex.label}
@@ -59,6 +60,7 @@ export function Indexes(props: IIndexesProps) {
           <MenuItem
             key={index.id}
             value={index.id}
+            active={props.current.id === index.id}
             onClick={() => props.onSelect(index)}
           >
             {index.label}

@@ -21,6 +21,7 @@ export interface IBookNote {
   // used in PDF
   page: number;
   // used in EPUB and MOBI
+  cfi: string;
   start: number;
   // if zero, is bookmark
   length: number;
