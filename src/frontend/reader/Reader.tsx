@@ -5,14 +5,17 @@
  * @Date   : 2022/9/16 23:11:48
  */
 import * as React from 'react';
-import {IBookContent, loadBook} from '../utils';
+import {Sidebar} from 'hana-ui';
 
-import css from '../styles/reader.module.less';
+import {IBookContent, loadBook} from '../utils';
 import {Viewer} from './Viewer';
 import {TBookType} from '../../interfaces/protocols';
 import {IBookIndex} from './types';
-import { Indexes } from './Indexes';
-import { Menu } from './Menu';
+import {Indexes} from './Indexes';
+import {Menu} from './Menu';
+
+import css from '../styles/reader.module.scss';
+import { PageCtr } from './PageCtr';
 
 export interface IReaderProps {
   name: string;
@@ -61,22 +64,39 @@ export default function Reader(props: IReaderProps) {
         />
       </div>
       <div className={css.bottom}>
-        <div className={`${css.indexes} ${showMenu && css.indexesShow}`}>
-          <div className={css.indexesTop}>目录</div>
-          <Indexes
-            indexes={indexes}
-            current={currentIndex}
-            onSelect={index => setCurrentIndex(index)}
-          />
+        <div>
+          {showMenu && (
+            <div
+              className={`${css.indexesBg}`}
+              onClick={() => setShowMenu(false)}
+            />
+        )}
+          <Sidebar
+            className={`${css.indexes}`}
+            open={showMenu}
+          >
+            <Indexes
+              indexes={indexes}
+              current={currentIndex}
+              onSelect={index => setCurrentIndex(index)}
+            />
+          </Sidebar>
         </div>
         <Viewer
           type={props.type}
           index={currentIndex}
-          onLoad={(indexes, current) => {
+          onLoad={(indexes) => {
             setIndexes(indexes);
-            setCurrentIndex(current);
+            setCurrentIndex(indexes[0]);
           }}
           content={book.content}
+        />
+        <PageCtr
+          max={100}
+          current={1}
+          onChange={(progress) => {
+            console.log(progress)
+          }}
         />
       </div>
     </div>

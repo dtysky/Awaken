@@ -11,8 +11,8 @@ import {IBook} from '../interfaces/protocols';
 import Books from './books/Books';
 import {IConfig, loadConfig, saveBooks} from './utils';
 
-import css from './styles/app.module.less';
-import './styles/global.less';
+import css from './styles/app.module.scss';
+import './styles/global.scss';
 
 type TState = 'Loading' | 'Books' | 'Reader';
 

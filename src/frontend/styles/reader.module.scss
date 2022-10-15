@@ -1,5 +1,5 @@
 /**
- * @File   : reader.module.less
+ * @File   : reader.module.scss
  * @Author : dtysky (dtysky@outlook.com)
  * @Link   : dtysky.moe
  * @Date   : 2022/9/19 00:22:21
@@ -22,20 +22,20 @@
 .top {
   position: relative;
   width: 100%;
-  height: 4rem;
+  height: 3rem;
   background: white;
 }
 
 .bottom {
   position: relative;
   width: 100%;
-  height: calc(100% - 4rem);
+  height: calc(100% - 3rem - 2px);
   background: rgb(251, 240, 217);
 }
 
 .menu {
   height: 100%;
-  margin-left: 2rem;
+  margin-left: 1rem;
   display: flex;
   justify-content: start;
   align-items: center;
@@ -43,7 +43,7 @@
 }
 
 .menuItem {
-  margin: 0 1rem;
+  margin: 0 0.5rem;
 }
 
 .menuIndex {
@@ -54,15 +54,21 @@
 
 }
 
+.indexesBg {
+  position: absolute;
+  z-index: 9;
+  width: 100%;
+  height: 100%; 
+  background: rgba(#aaa, 0.6);
+}
+
 .indexes {
   position: absolute;
-  z-index: 2;
+  z-index: 10;
   width: 25%;
   min-width: 200px;
   max-width: 320px;
   height: 100%; 
-  background: white;
-  display: none;
 }
 
 .indexesShow {
@@ -83,27 +89,39 @@
   color: black;
 }
 
-.indexCurrent {
-  color: aqua;
-}
-
-.index-0 {
-  margin-left: 1rem;
-}
-
-.index-1 {
-  margin-left: 1.4rem;
-}
-
-.index-2 {
-  margin-left: 1.8rem;
-}
-
-
 .viewer {
   position: absolute;
   z-index: 1;
   width: 100%;
   height: 100%;
   left: 0; 
+}
+
+.pageCtr {
+}
+
+.pageCtrPre {
+  z-index: 3;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5%;
+  height: 100%;
+}
+
+.pageCtrNext {
+  z-index: 3;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 5%;
+  height: 100%;
+}
+
+.pageCtrSlider {
+  z-index: 3;
+  position: absolute;
+  left: 5%;
+  bottom: 1em;
+  width: 90%;
 }

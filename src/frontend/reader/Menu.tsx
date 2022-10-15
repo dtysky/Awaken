@@ -5,8 +5,9 @@
  * @Date   : 2022/9/16 23:08:40
  */
 import * as React from 'react';
+import {ButtonGroup, Button} from 'hana-ui';
 
-import css from '../styles/reader.module.less';
+import css from '../styles/reader.module.scss';
 
 interface IMenuProps {
   onSwitch(): void;
@@ -15,19 +16,20 @@ interface IMenuProps {
 
 export function Menu(props: IMenuProps) {
   return (
-    <div className={css.menu}>
-      <div
-        className={`${css.menuItem} ${css.menuIndex}`}
+    <ButtonGroup className={css.menu}>
+      <Button
+        className={css.menuItem}
         onClick={props.onSwitch}
       >
         目录
-      </div>
-      <div
-        className={`${css.menuItem} ${css.menuReturn}`}
+      </Button>
+      <Button
+        className={css.menuItem}
+        type={'error'}
         onClick={props.onReturn}
       >
         返回
-      </div>
-    </div>
+      </Button>
+    </ButtonGroup>
   )
 }

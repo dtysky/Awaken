@@ -9,6 +9,10 @@ module.exports = (env) => {
   return {
     devtool: 'source-map',
     mode: 'development',
+    stats: {
+      warnings:false
+    },
+
     entry: {
       main: [
         path.resolve(__dirname, './src/index.tsx')
@@ -45,7 +49,7 @@ module.exports = (env) => {
           }
         },
         {
-          test: /\.(css|less)$/,
+          test: /\.(css|scss|sass)$/,
           use: [
             {
               loader: MiniCssExtractPlugin.loader
@@ -57,7 +61,7 @@ module.exports = (env) => {
               loader: 'postcss-loader'
             },
             {
-              loader: 'less-loader'
+              loader: 'sass-loader'
             }
           ]
         },
@@ -75,7 +79,10 @@ module.exports = (env) => {
     devServer: {
       host: '0.0.0.0',
       port: 8888,
-      hot: true
+      hot: true,
+      client: {
+        overlay: false
+      }
     }
   };
 };

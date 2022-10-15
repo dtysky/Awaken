@@ -5,13 +5,14 @@
  * @Date   : 2022/9/16 23:10:40
  */
 import * as React from 'react';
+import {Menu, SubMenu, MenuItem} from 'hana-ui';
 
-import css from '../styles/reader.module.less';
+import css from '../styles/reader.module.scss';
 import {TBookType} from '../../interfaces/protocols';
 import {IBookIndex} from './types';
 
 interface IIndexesProps {
-  layer?: number;
+  subIndex?: IBookIndex;
   indexes: IBookIndex[];
   current: IBookIndex;
   onSelect(index: IBookIndex): void;
@@ -22,26 +23,48 @@ export function Indexes(props: IIndexesProps) {
     return null;
   }
 
+  const CLZ = props.subIndex ? SubMenu : Menu as any;
+
   return (
-    <>
-      {props.indexes.map(index => (
-        <div
-          className={`${css.index} ${css['index-' + (props.layer || 0)]} ${props.current.id === index.id && css.indexCurrent}`}
-          key={index.id}
-          onClick={() => props.onSelect(index)}
-        >
-          {index.label}
-          {index.children && (
+    <CLZ
+      title={props.subIndex?.label}
+      type="linear"
+    >
+      {
+        props.subIndex && (
+          <MenuItem
+            key={props.subIndex.id}
+            value={props.subIndex.id}
+            onClick={() => props.onSelect(props.subIndex)}
+          >
+            {props.subIndex.label}
+          </MenuItem>
+        )
+      }
+
+      {props.indexes.map(index => {
+        if (index.children?.length) {
+          return (
             <Indexes
               key={index.id}
-              layer={(props.layer || 0) + 1}
+              subIndex={index}
               onSelect={props.onSelect}
               current={props.current}
               indexes={index.children}
             />
-          )}
-        </div>
-      ))}
-    </>
+          );
+        }
+
+        return (
+          <MenuItem
+            key={index.id}
+            value={index.id}
+            onClick={() => props.onSelect(index)}
+          >
+            {index.label}
+          </MenuItem>
+        );
+      })}
+    </CLZ>
   )
 }

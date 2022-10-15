@@ -8,7 +8,7 @@ import * as React from 'react';
 import {IBook} from '../../interfaces/protocols';
 import ColorHash from 'color-hash'
 
-import css from '../styles/books.module.less';
+import css from '../styles/books.module.scss';
 
 export interface IBooksProps {
   books: IBook[];

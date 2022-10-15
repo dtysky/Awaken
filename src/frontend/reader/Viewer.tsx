@@ -7,13 +7,13 @@
 import * as React from 'react';
 import ePub from 'epubjs';
 
-import css from '../styles/reader.module.less';
+import css from '../styles/reader.module.scss';
 import {TBookType} from '../../interfaces/protocols';
 import {IBookIndex} from './types';
 
 interface IViewerCommonProps {
   content: ArrayBuffer;
-  onLoad(indexes: IBookIndex[], currentIndex: IBookIndex): void;
+  onLoad(indexes: IBookIndex[]): void;
   index?: IBookIndex;
 }
 
@@ -69,7 +69,7 @@ function EPUBViewer(props: IViewerCommonProps) {
         nav.toc.forEach(t => {
           convertEPUBIndex(t, indexes);
         });
-        props.onLoad(indexes, indexes[0]);
+        props.onLoad(indexes);
       })
 
       rendition.display().then(() => {
@@ -79,8 +79,9 @@ function EPUBViewer(props: IViewerCommonProps) {
 
     if (preIndex !== props.index) {
       preIndex = props.index;
-      console.log(rendition, preIndex, idToHref[preIndex.id])
-      rendition?.display(idToHref[preIndex.id]);
+      rendition?.display(idToHref[preIndex.id]).then(() => {
+        console.log(rendition.currentLocation())
+      });
     }
   });
 
