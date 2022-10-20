@@ -9,3 +9,11 @@ export interface IBookIndex {
   label: string;
   children: IBookIndex[];
 }
+
+export interface IViewerCommonProps {
+  content: ArrayBuffer;
+  index?: IBookIndex;
+  progress: number;
+  onLoad(indexes: IBookIndex[], start: number, max: number): void;
+  onProgress?(progress: number): void;
+}
