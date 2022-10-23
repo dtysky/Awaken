@@ -1,5 +1,5 @@
 /**
- * @File   : Notes.tsx
+ * @File   : Tools.tsx
  * @Author : dtysky (dtysky@outlook.com)
  * @Link   : dtysky.moe
  * @Date   : 2022/9/16 23:09:30
@@ -11,24 +11,19 @@ import css from '../styles/reader.module.scss';
 import {IBookNote, TBookType} from '../../interfaces/protocols';
 import {IBookIndex} from './types';
 
-export enum ENotesAction {
-  Add,
-  Update,
-  Delete
-}
-
-interface INotesProps {
+interface IToolsProps {
   notes: IBookNote[];
   currentPos: number;
   requestMark: boolean;
   // when requestMark is true
   // if rangePos is undefined then switch bookmark
   // else show note pane
-  rangePos?: string | number;
+  requestStart?: string | number;
+  requestLength?: number;
   onChangeNote(action: ENotesAction, note: IBookNote): void;
 }
 
-export function Notes(props: INotesProps) {
+export function Notes(props: IToolsProps) {
   if (!props.notes?.length) {
     return null;
   }

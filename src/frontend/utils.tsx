@@ -6,6 +6,7 @@
  */
 import bk from '../backend';
 import {IBook, IBookNote} from '../interfaces/protocols';
+import { ENotesAction } from './reader/types';
 
 export interface IConfig {
   folder: string;
@@ -65,4 +66,12 @@ export async function loadBook(filePath: string): Promise<IBookContent> {
     content: await bk.worker.fs.readFile(filePath, 'binary', 'Books') as ArrayBuffer,
     notes: []
   }
+}
+
+export function checkNoteMark(notes: IBookNote[], pos: string | number): number {
+
+}
+
+export function requestNoteMark(notes: IBookNote[], action: ENotesAction, note: IBookNote): IBookNote[] {
+
 }

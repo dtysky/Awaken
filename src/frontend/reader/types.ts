@@ -10,10 +10,18 @@ export interface IBookIndex {
   children: IBookIndex[];
 }
 
+export enum ENotesAction {
+  Add,
+  Update,
+  Delete
+}
+
 export interface IViewerCommonProps {
   content: ArrayBuffer;
   index?: IBookIndex;
   progress: number;
   onLoad(indexes: IBookIndex[], start: number, max: number): void;
   onProgress?(progress: number): void;
+  // checkMark(pos: string | number): [pos];
+  // requestMark(pos: string | number, len: number): number;
 }
