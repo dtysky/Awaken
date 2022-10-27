@@ -9,7 +9,7 @@ import {IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {IBookNote, TBookType} from '../../interfaces/protocols';
-import {IBookIndex} from './types';
+import {ENotesAction, IBookIndex} from './types';
 
 interface IToolsProps {
   notes: IBookNote[];

@@ -45,11 +45,18 @@ export function EPUBViewer(props: IViewerCommonProps) {
             convertEPUBIndex(t, indexes);
           });
           props.onLoad(indexes, 1, cfis.length);
-          console.log(cfis)
+          
           setState('Ready');
         });
       });
+
+      rendition.on('rendered', e => {
+        rendition.getContents()[0].on('selected', (cfiRange) => {
+          console.log('r c', cfiRange);
+        })
+      });
     }
+
 
     function updateProgress(location) {
       const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;

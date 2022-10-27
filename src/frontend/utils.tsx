@@ -68,10 +68,10 @@ export async function loadBook(filePath: string): Promise<IBookContent> {
   }
 }
 
-export function checkNoteMark(notes: IBookNote[], pos: string | number): number {
+// export function checkNoteMark(notes: IBookNote[], pos: string | number): number {
 
-}
+// }
 
-export function requestNoteMark(notes: IBookNote[], action: ENotesAction, note: IBookNote): IBookNote[] {
+// export function requestNoteMark(notes: IBookNote[], action: ENotesAction, note: IBookNote): IBookNote[] {
 
-}
+// }
