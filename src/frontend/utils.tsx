@@ -5,8 +5,7 @@
  * @Date   : 2022/9/16 23:18:24
  */
 import bk from '../backend';
-import {IBook, IBookNote} from '../interfaces/protocols';
-import { ENotesAction } from './reader/types';
+import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
 
 export interface IConfig {
   folder: string;
@@ -23,11 +22,11 @@ export async function loadConfig(): Promise<IConfig> {
     books: [
       {
         hash: '1',
-        type: 'MOBI',
+        type: 'EPUB',
         name: '二十九',
         author: '瞬光寂暗',
         cover: '',
-        filePath: '二十九.mobi',
+        filePath: '二十九.epub',
         progress: 0
       },
       {
@@ -41,11 +40,11 @@ export async function loadConfig(): Promise<IConfig> {
       },
       {
         hash: '3',
-        type: 'PDF',
+        type: 'EPUB',
         name: '乡土中国',
         author: '费孝通',
         cover: '',
-        filePath: '乡土中国.pdf',
+        filePath: '乡土中国.epub',
         progress: 0
       }
     ]
@@ -58,20 +57,15 @@ export async function saveBooks(folder: string, books: IBook[]) {
 
 export interface IBookContent {
   content: ArrayBuffer;
-  notes: IBookNote[];
+  config: IBookConfig;
 }
 
 export async function loadBook(filePath: string): Promise<IBookContent> {
   return {
     content: await bk.worker.fs.readFile(filePath, 'binary', 'Books') as ArrayBuffer,
-    notes: []
+    config: {
+      bookmarks: [],
+      notes: []
+    }
   }
 }
-
-// export function checkNoteMark(notes: IBookNote[], pos: string | number): number {
-
-// }
-
-// export function requestNoteMark(notes: IBookNote[], action: ENotesAction, note: IBookNote): IBookNote[] {
-
-// }

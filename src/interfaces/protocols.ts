@@ -4,7 +4,7 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:44:34
  */
-export type TBookType = 'EPUB' | 'MOBI' | 'PDF';
+export type TBookType = 'EPUB';
 
 export interface IBook {
   hash: string;
@@ -18,13 +18,15 @@ export interface IBook {
 
 // highlights and annotations
 export interface IBookNote {
-  // used in PDF
-  page: number;
-  // used in EPUB and MOBI
   cfi: string;
-  start: number;
-  // if zero, is bookmark
-  length: number;
   // default to ''
-  annotation: string;
+  annotation?: string;
+  // after parsed
+  text?: string;
+  page?: number;
+}
+
+export interface IBookConfig {
+  bookmarks: IBookNote[];
+  notes: IBookNote[];
 }

@@ -9,7 +9,7 @@ import {IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {IBookNote, TBookType} from '../../interfaces/protocols';
-import {ENotesAction, IBookIndex} from './types';
+import {ENoteAction, IBookIndex} from './common';
 
 interface IToolsProps {
   notes: IBookNote[];
@@ -20,7 +20,7 @@ interface IToolsProps {
   // else show note pane
   requestStart?: string | number;
   requestLength?: number;
-  onChangeNote(action: ENotesAction, note: IBookNote): void;
+  onChangeNote(action: ENoteAction, note: IBookNote): void;
 }
 
 export function Notes(props: IToolsProps) {

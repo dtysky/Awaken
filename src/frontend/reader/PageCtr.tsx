@@ -9,7 +9,6 @@ import {Slider} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {TBookType} from '../../interfaces/protocols';
-import {IBookIndex} from './types';
 
 interface IPageCtrProps {
   start: number;

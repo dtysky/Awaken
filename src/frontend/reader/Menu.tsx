@@ -8,10 +8,14 @@ import * as React from 'react';
 import {ButtonGroup, Button} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
+import {INoteMarkStatus} from './common';
 
 interface IMenuProps {
-  onSwitch(): void;
+  bookmarkStatus?: INoteMarkStatus;
+  onIndexes(): void;
+  onNotes(): void;
   onReturn(): void;
+  onBookmark(): void;
 }
 
 export function Menu(props: IMenuProps) {
@@ -19,16 +23,30 @@ export function Menu(props: IMenuProps) {
     <ButtonGroup className={css.menu}>
       <Button
         className={css.menuItem}
-        onClick={props.onSwitch}
+        type={'error'}
+        onClick={props.onReturn}
+      >
+        返回
+      </Button>
+      <Button
+        className={css.menuItem}
+        onClick={props.onIndexes}
       >
         目录
       </Button>
       <Button
         className={css.menuItem}
-        type={'error'}
-        onClick={props.onReturn}
+        onClick={props.onNotes}
       >
-        返回
+        笔记
+      </Button>
+      <Button
+        className={css.menuItem}
+        onClick={props.onBookmark}
+        type={props.bookmarkStatus?.exist ? 'primary' : 'default'}
+        disabled={!props.bookmarkStatus}
+      >
+        书签
       </Button>
     </ButtonGroup>
   )

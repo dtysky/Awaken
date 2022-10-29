@@ -89,6 +89,25 @@
   color: black;
 }
 
+.notes {
+  position: absolute;
+  z-index: 10;
+  width: 40%;
+  min-width: 200px;
+  max-width: 320px;
+  height: 100%; 
+}
+
+.notesContent {
+  margin: auto;
+  overflow-x: hidden;
+}
+
+.notesItem {
+  width: 90%;
+  margin: 8px 5%;
+}
+
 .viewer {
   position: absolute;
   z-index: 1;

@@ -9,7 +9,7 @@ import {Menu, SubMenu, MenuItem} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {TBookType} from '../../interfaces/protocols';
-import {IBookIndex} from './types';
+import {IBookIndex} from './common';
 
 interface IIndexesProps {
   subIndex?: IBookIndex;

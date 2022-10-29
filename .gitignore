@@ -3,7 +3,7 @@ package-lock.json
 platforms/**/assets
 **/*/dist
 test/*
-!test/乡土中国.pdf
-!test/我为什么写作.epub
-!test/二十九.mobi
+!test/乡土中国.*
+!test/我为什么写作.*
+!test/二十九.*
 
