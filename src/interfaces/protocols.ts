@@ -19,11 +19,11 @@ export interface IBook {
 // highlights and annotations
 export interface IBookNote {
   cfi: string;
+  page: number;
+  // for note
+  text?: string;
   // default to ''
   annotation?: string;
-  // after parsed
-  text?: string;
-  page?: number;
 }
 
 export interface IBookConfig {

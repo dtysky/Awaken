@@ -10,7 +10,7 @@ import {Sidebar} from 'hana-ui';
 import {IBookContent, loadBook} from '../utils';
 import {EJumpAction, Viewer} from './Viewer';
 import {IBookNote, TBookType} from '../../interfaces/protocols';
-import {changeNote, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
+import {changeNote, checkNoteMark, convertBookNotes, IBookIndex, IBookNoteParsed, INoteMarkStatus} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
 import {Notes} from './Notes';
@@ -33,13 +33,13 @@ let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex)
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
   const [content, setContent] = React.useState<ArrayBuffer>();
-  const [bookmarks, setBookmarks] = React.useState<IBookNote[]>([]);
-  const [notes, setNotes] = React.useState<IBookNote[]>([]);
+  const [bookmarks, setBookmarks] = React.useState<IBookNoteParsed[]>([]);
+  const [notes, setNotes] = React.useState<IBookNoteParsed[]>([]);
   const [indexes, setIndexes] = React.useState<IBookIndex[]>();
   const [currentIndex, setCurrentIndex] = React.useState<IBookIndex>();
   const [range, setRange] = React.useState<{start: number, max: number}>();
   const [progress, setProgress] = React.useState<number>(1);
-  const [bookmarkInfo, setBookmarkInfo] = React.useState<IBookNote>();
+  const [bookmarkInfo, setBookmarkInfo] = React.useState<IBookNoteParsed>();
   const [bookmarkStatus, setBookmarkStatus] = React.useState<INoteMarkStatus>();
   const [showIndexes, setShowIndexes] = React.useState<boolean>(false);
   const [showNotes, setShowNotes] = React.useState<boolean>(false);
@@ -49,8 +49,8 @@ export default function Reader(props: IReaderProps) {
       setState('Loading');
       loadBook(props.filePath).then(book => {
         setContent(book.content);
-        setBookmarks(book.config.bookmarks);
-        setNotes(book.config.notes);
+        setBookmarks(convertBookNotes(book.config.bookmarks));
+        setNotes(convertBookNotes(book.config.notes));
         setState('Ready');
       }).catch(error => {
         console.error(error);
@@ -136,7 +136,7 @@ export default function Reader(props: IReaderProps) {
           onBookmarkInfo={info => {
             if (info !== bookmarkInfo) {
               setBookmarkInfo(info);
-              setBookmarkStatus(checkNoteMark(bookmarks, info.cfi));
+              setBookmarkStatus(checkNoteMark(bookmarks, info));
             }
           }}
         />

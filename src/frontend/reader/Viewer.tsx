@@ -8,7 +8,7 @@ import * as React from 'react';
 import ePub, { EpubCFI } from 'epubjs';
 
 import css from '../styles/reader.module.scss';
-import {mergeCFI, IBookIndex} from './common';
+import {mergeCFI, IBookIndex, IBookNoteParsed} from './common';
 import {IBookNote} from '../../interfaces/protocols';
 
 
@@ -28,7 +28,7 @@ export interface IViewerProps {
     indexes: IBookIndex[], start: number, max: number,
     jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
   ): void;
-  onBookmarkInfo(info: IBookNote): void;
+  onBookmarkInfo(info: IBookNoteParsed): void;
   onProgress?(progress: number): void;
   // onRequestNote(note: IBookNote): Promise<ENotesAction>;
 }
@@ -54,6 +54,8 @@ export function Viewer(props: IViewerProps) {
     rendition.off('relocated', updateProgress);
     props.onProgress(loc);
     props.onBookmarkInfo({
+      start: location.start.cfi,
+      end: location.end.cfi,
       cfi: mergeCFI(location.start.cfi, location.end.cfi),
       page: loc
     });

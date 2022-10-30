@@ -7,6 +7,28 @@
 import {EpubCFI} from 'epubjs';
 import {IBookNote} from '../../interfaces/protocols';
 
+const parser = new EpubCFI() as any;
+
+export interface IBookNoteParsed extends IBookNote {
+  // cfi
+  start: string;
+  end: string;
+}
+
+export function convertBookNotes(notes: IBookNote[]): IBookNoteParsed[] {
+  notes.forEach(note => {
+    const cfi = note;
+    const base = parser.getPathComponent(cfi);
+    const [r1, r2] = parser.getRange(cfi);
+
+    const n = note as IBookNoteParsed;
+    n.start = `epubcfi(/6/4!/4/${base}${r1})`;
+    n.end = `epubcfi(/6/4!/4/${base}${r2})`;
+  });
+
+  return notes as IBookNoteParsed[];
+}
+
 export interface IBookIndex {
   id: string | number;
   label: string;
@@ -18,8 +40,6 @@ export enum ENoteAction {
   Update,
   Delete
 }
-
-const parser = new EpubCFI() as any;
 
 export function mergeCFI(cfi1: string, cfi2: string): string {
   console.log(cfi1, cfi2);
@@ -49,17 +69,15 @@ export interface INoteMarkStatus {
   index: number;
 }
 
-export function checkNoteMark(notes: IBookNote[], cfi: string): INoteMarkStatus {
+export function checkNoteMark(notes: IBookNoteParsed[], note: IBookNoteParsed): INoteMarkStatus {
   if (!notes.length) {
     return {exist: false, index: 0};
   }
 
-  // 1. split cfi range to start and end
-  // 2. use compare
+  const {start, end} = note;
 
-  console.log('xxxx', notes)
   for (let index = 0; index < notes.length; index += 1) {
-    const res = parser.compare(cfi, notes[index].cfi);
+    const res = parser.compare(note.start, notes[index].cfi);
     console.log(res);
 
     // if (res >= 0) {
@@ -71,8 +89,8 @@ export function checkNoteMark(notes: IBookNote[], cfi: string): INoteMarkStatus 
 }
 
 export function changeNote(
-  notes: IBookNote[],
-  note: IBookNote,
+  notes: IBookNoteParsed[],
+  note: IBookNoteParsed,
   status: INoteMarkStatus,
   action?: ENoteAction,
 ): INoteMarkStatus {
