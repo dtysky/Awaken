@@ -14,7 +14,9 @@ interface IPageCtrProps {
   start: number;
   max: number;
   current: number;
-  onChange(progress: number): void;
+  onJump(progress: number): void;
+  onPre(): void;
+  onNext(): void;
 }
 
 export function PageCtr(props: IPageCtrProps) {
@@ -25,9 +27,9 @@ export function PageCtr(props: IPageCtrProps) {
   React.useEffect(() => {
     function processEvent(event: KeyboardEvent) {
       if (event.key === 'ArrowLeft') {
-        props.onChange(Math.max(props.current - 1, props.start));
+        props.onPre();
       } else if (event.key === 'ArrowRight') {
-        props.onChange(Math.min(props.current + 1, props.max));
+        props.onNext();
       }
     }
 
@@ -40,8 +42,8 @@ export function PageCtr(props: IPageCtrProps) {
 
   return (
     <div className={css.pageCtr}>
-      <div className={css.pageCtrPre} onClick={() => props.onChange(Math.max(props.current - 1, props.start))} />
-      <div className={css.pageCtrNext} onClick={() => props.onChange(Math.min(props.current + 1, props.max))} />
+      <div className={css.pageCtrPre} onClick={props.onPre} />
+      <div className={css.pageCtrNext} onClick={props.onNext} />
       <div className={css.pageCtrSlider}>
         <Slider
           size='small'
@@ -49,7 +51,8 @@ export function PageCtr(props: IPageCtrProps) {
           value={props.current}
           min={props.start}
           max={props.max}
-          onChange={val => props.onChange(val)}
+          //@todo throttle
+          onChange={val => props.onJump(val)}
         />
       </div>
     </div>

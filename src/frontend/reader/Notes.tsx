@@ -23,11 +23,11 @@ export function Notes(props: INotesProps) {
       {
         props.bookmarks.map(item => (
           <div
+            key={item.cfi}
             className={css.notesItem}
             onClick={() => props.onJump(item)}
           >
             <Postcard
-              key={item.cfi}
               title="书签"
               subtitle={`第${item.page}页`}
             />
@@ -39,11 +39,11 @@ export function Notes(props: INotesProps) {
       {
         props.notes.map(item => (
           <div
+            key={item.cfi}
             className={css.notesItem}
             onClick={() => props.onJump(item)}
           >
             <Postcard
-              key={item.cfi}
               title="笔记"
               subtitle={`第${item.page}页`}
             >

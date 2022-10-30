@@ -12,13 +12,22 @@ import {mergeCFI, IBookIndex} from './common';
 import {IBookNote} from '../../interfaces/protocols';
 
 
+export enum EJumpAction {
+  CFI,
+  Page,
+  Index,
+  Next,
+  Pre
+}
+
 export interface IViewerProps {
   content: ArrayBuffer;
   bookmarks: IBookNote[];
   notes: IBookNote[];
-  index?: IBookIndex;
-  progress: number;
-  onLoad(indexes: IBookIndex[], start: number, max: number, jump: (cfi: string) => void): void;
+  onLoad(
+    indexes: IBookIndex[], start: number, max: number,
+    jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
+  ): void;
   onBookmarkInfo(info: IBookNote): void;
   onProgress?(progress: number): void;
   // onRequestNote(note: IBookNote): Promise<ENotesAction>;
@@ -26,7 +35,6 @@ export interface IViewerProps {
 
 type TState = 'Init' | 'Loading' | 'Ready';
 
-let preIndex: IBookIndex;
 let preContent: ePub.Contents;
 let rendition: ePub.Rendition;
 let idToHref: {[id: string]: string};
@@ -40,12 +48,10 @@ function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
 
 export function Viewer(props: IViewerProps) {
   const [state, setState] = React.useState<TState>('Init');
-  const [progress, setProgress] = React.useState<number>(1);
 
   function updateProgress(location) {
     const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;
     rendition.off('relocated', updateProgress);
-    setProgress(loc);
     props.onProgress(loc);
     props.onBookmarkInfo({
       cfi: mergeCFI(location.start.cfi, location.end.cfi),
@@ -64,16 +70,42 @@ export function Viewer(props: IViewerProps) {
       } as any);
 
       book.loaded.navigation.then(nav => {
-        book.locations.generate(888).then(cfis => {
+        book.locations.generate(1000).then(cfis => {
           idToHref = {};
           const indexes: IBookIndex[] = [];
           nav.toc.forEach(t => {
             convertEPUBIndex(t, indexes);
           });
 
-          const jump = (cfi: string) => {
-            rendition.on('relocated', updateProgress);
-            rendition.display(cfi);
+          const jump = (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => {
+            if (action !== EJumpAction.Page) {
+              rendition.on('relocated', updateProgress);
+            }
+
+            if (action === EJumpAction.Pre) {
+              rendition.prev();
+              return;
+            }
+
+            if (action === EJumpAction.Next) {
+              rendition.next();
+              return;
+            }
+
+            if (action === EJumpAction.CFI) {
+              rendition.display(cfiOrPageOrIndex as string);
+              return;
+            }
+
+            if (action === EJumpAction.Index) {
+              rendition.display(idToHref[(cfiOrPageOrIndex as IBookIndex).id]);  
+              return;
+            }
+
+            if (action === EJumpAction.Page) {
+              rendition.display(rendition.book.locations.cfiFromLocation(cfiOrPageOrIndex as number));
+              return;
+            }
           };
 
           props.onLoad(indexes, 1, cfis.length, jump);
@@ -94,23 +126,6 @@ export function Viewer(props: IViewerProps) {
         preContent?.off('selected', addNote);
         preContent = rendition.getContents()[0];
         preContent?.on('selected', addNote);
-      });
-    }
-
-    if (preIndex !== props.index) {
-      preIndex = props.index;
-      rendition.on('relocated', updateProgress);
-      rendition?.display(idToHref[preIndex.id]);
-    }
-
-    if (props.progress !== progress) {
-      setProgress(props.progress);
-      const cfi = rendition.book.locations.cfiFromLocation(props.progress);
-      rendition.display(cfi).then(() => {
-        props.onBookmarkInfo({
-          cfi,
-          page: rendition.book.locations.locationFromCfi(cfi) as unknown as number
-        });
       });
     }
   });

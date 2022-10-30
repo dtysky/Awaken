@@ -8,9 +8,9 @@ import * as React from 'react';
 import {Sidebar} from 'hana-ui';
 
 import {IBookContent, loadBook} from '../utils';
-import {Viewer} from './Viewer';
+import {EJumpAction, Viewer} from './Viewer';
 import {IBookNote, TBookType} from '../../interfaces/protocols';
-import {changeBookmark, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
+import {changeNote, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
 import {Notes} from './Notes';
@@ -29,7 +29,7 @@ export interface IReaderProps {
 
 type TState = 'Init' | 'Loading' | 'Parser' | 'Ready';
 
-let jump: (cfi: string) => void;
+let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void;
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
   const [content, setContent] = React.useState<ArrayBuffer>();
@@ -73,11 +73,17 @@ export default function Reader(props: IReaderProps) {
       <div className={css.top}>
         <Menu
           bookmarkStatus={bookmarkStatus}
-          onIndexes={() => setShowIndexes(!showIndexes)}
-          onNotes={() => setShowNotes(!showNotes)}
+          onIndexes={() => {
+            setShowIndexes(!showIndexes);
+            setShowNotes(false);
+          }}
+          onNotes={() => {
+            setShowNotes(!showNotes);
+            setShowIndexes(false);
+          }}
           onReturn={props.onClose}
           onBookmark={() => {
-            setBookmarkStatus(changeBookmark(bookmarks, bookmarkInfo, bookmarkStatus));
+            setBookmarkStatus(changeNote(bookmarks, bookmarkInfo, bookmarkStatus));
           }}
         />
       </div>
@@ -93,33 +99,33 @@ export default function Reader(props: IReaderProps) {
             />
           )}
           <Sidebar
-            className={`${css.indexes}`}
-            open={showIndexes}
-          >
-            <Indexes
-              indexes={indexes}
-              current={currentIndex}
-              onSelect={index => setCurrentIndex(index)}
-            />
-          </Sidebar>
-          <Sidebar
             className={`${css.notes}`}
-            open={showNotes}
-            position={'right' as any}
+            open={showIndexes || showNotes}
           >
-            <Notes
-              bookmarks={bookmarks}
-              notes={notes}
-              onJump={note => jump?.(note.cfi)}
-            />
+            {
+              showIndexes ? (
+                <Indexes
+                  indexes={indexes}
+                  current={currentIndex}
+                  onSelect={index => {
+                    jump(EJumpAction.Index, index);
+                    setCurrentIndex(index);
+                  }}
+                />
+              ) : (
+                <Notes
+                  bookmarks={bookmarks}
+                  notes={notes}
+                  onJump={note => jump?.(EJumpAction.CFI, note.cfi)}
+                />    
+              )
+            }
           </Sidebar>
         </div>
         <Viewer
           content={content}
           bookmarks={bookmarks}
           notes={notes}
-          index={currentIndex}
-          progress={progress}
           onLoad={(indexes, start, max, jumpTo) => {
             setIndexes(indexes);
             setCurrentIndex(indexes[0]);
@@ -140,7 +146,12 @@ export default function Reader(props: IReaderProps) {
               start={range.start}
               max={range.max}
               current={progress}
-              onChange={(p) => setProgress(p)}
+              onPre={() => jump(EJumpAction.Pre)}
+              onNext={() => jump(EJumpAction.Next)}
+              onJump={p => {
+                setProgress(p);
+                jump(EJumpAction.Page, p)
+              }}
             />
           )
         }
