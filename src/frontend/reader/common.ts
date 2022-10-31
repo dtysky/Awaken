@@ -42,7 +42,6 @@ export enum ENoteAction {
 }
 
 export function mergeCFI(cfi1: string, cfi2: string): string {
-  console.log(cfi1, cfi2);
   let tmp = parser.getPathComponent(cfi1);
   const tmp1: string[] = tmp.substring(0, tmp.length - 1).split('/').slice(2);
   tmp = parser.getPathComponent(cfi2);
@@ -77,12 +76,17 @@ export function checkNoteMark(notes: IBookNoteParsed[], note: IBookNoteParsed): 
   const {start, end} = note;
 
   for (let index = 0; index < notes.length; index += 1) {
-    const res = parser.compare(note.start, notes[index].cfi);
-    console.log(res);
+    const {start: s, end: e} = notes[index];
+    const cse = parser.compare(start, e);
+    const ces = parser.compare(end, s);
 
-    // if (res >= 0) {
-    //   return {exist: true, index};
-    // }
+    if (ces <= 0) {
+      return {exist: false, index};
+    }
+
+    if (cse <= 0) {
+      return {exist: true, index};
+    }
   }
 
   return {exist: false, index: notes.length};

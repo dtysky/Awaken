@@ -116,7 +116,7 @@ export default function Reader(props: IReaderProps) {
                 <Notes
                   bookmarks={bookmarks}
                   notes={notes}
-                  onJump={note => jump?.(EJumpAction.CFI, note.cfi)}
+                  onJump={note => jump?.(EJumpAction.CFI, note.start)}
                 />    
               )
             }

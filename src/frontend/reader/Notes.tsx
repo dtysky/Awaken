@@ -9,11 +9,12 @@ import {Card, Postcard} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {IBookNote} from '../../interfaces/protocols';
+import {IBookNoteParsed} from './common';
 
 interface INotesProps {
-  bookmarks: IBookNote[];
-  notes: IBookNote[];
-  onJump(note: IBookNote): void;
+  bookmarks: IBookNoteParsed[];
+  notes: IBookNoteParsed[];
+  onJump(note: IBookNoteParsed): void;
 }
 
 export function Notes(props: INotesProps) {
