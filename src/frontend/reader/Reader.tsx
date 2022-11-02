@@ -10,7 +10,7 @@ import {Sidebar} from 'hana-ui';
 import {IBookContent, loadBook} from '../utils';
 import {EJumpAction, Viewer} from './Viewer';
 import {IBookNote, TBookType} from '../../interfaces/protocols';
-import {changeNote, checkNoteMark, convertBookNotes, IBookIndex, IBookNoteParsed, INoteMarkStatus} from './common';
+import {changeNote, checkNoteMark, convertBookNotes, IBookIndex, IBookNoteParsed, INoteMarkStatus, splitCFI} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
 import {Notes} from './Notes';
@@ -43,6 +43,7 @@ export default function Reader(props: IReaderProps) {
   const [bookmarkStatus, setBookmarkStatus] = React.useState<INoteMarkStatus>();
   const [showIndexes, setShowIndexes] = React.useState<boolean>(false);
   const [showNotes, setShowNotes] = React.useState<boolean>(false);
+  const [showToolsCFI, setShowToolsCFI] = React.useState<string>('');
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -136,7 +137,7 @@ export default function Reader(props: IReaderProps) {
           onBookmarkInfo={info => {
             if (info !== bookmarkInfo) {
               setBookmarkInfo(info);
-              setBookmarkStatus(checkNoteMark(bookmarks, info));
+              setBookmarkStatus(checkNoteMark(bookmarks, info.start, info.end));
             }
           }}
         />

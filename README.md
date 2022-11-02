@@ -1,5 +1,9 @@
 # Awaken
 
+## todo
+
+1. 书籍导入功能，导入后为`[hash]`目录，下面是`[书名].epub` + `config.json`，不需要`path`了。
+
 A cross-platform ebooks reader, supports win/android/mac/ios/linux, use wevdav to sync progress, hightlights and annotations.
 
 ## Copyright

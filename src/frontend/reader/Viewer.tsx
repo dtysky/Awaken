@@ -5,12 +5,11 @@
  * @Date   : 2022/10/20 23:29:09
  */
 import * as React from 'react';
-import ePub, { EpubCFI } from 'epubjs';
+import ePub, {EpubCFI} from 'epubjs';
 
 import css from '../styles/reader.module.scss';
-import {mergeCFI, IBookIndex, IBookNoteParsed} from './common';
-import {IBookNote} from '../../interfaces/protocols';
-
+import {mergeCFI, IBookIndex, IBookNoteParsed, ENoteAction, splitCFI} from './common';
+import { Tools } from './Tools';
 
 export enum EJumpAction {
   CFI,
@@ -22,15 +21,14 @@ export enum EJumpAction {
 
 export interface IViewerProps {
   content: ArrayBuffer;
-  bookmarks: IBookNote[];
-  notes: IBookNote[];
+  bookmarks: IBookNoteParsed[];
+  notes: IBookNoteParsed[];
   onLoad(
     indexes: IBookIndex[], start: number, max: number,
     jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
   ): void;
   onBookmarkInfo(info: IBookNoteParsed): void;
-  onProgress?(progress: number): void;
-  // onRequestNote(note: IBookNote): Promise<ENotesAction>;
+  onProgress(progress: number): void;
 }
 
 type TState = 'Init' | 'Loading' | 'Ready';
@@ -48,6 +46,7 @@ function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
 
 export function Viewer(props: IViewerProps) {
   const [state, setState] = React.useState<TState>('Init');
+  const [noteCFI, setNoteCFI] = React.useState<string>('');
 
   function updateProgress(location) {
     const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;
@@ -117,11 +116,8 @@ export function Viewer(props: IViewerProps) {
         });
       });
 
-      const addNote = (cfiRange: string) => {
-        console.log('r c', cfiRange);
-        const x = new EpubCFI(cfiRange);
-        console.log(x);
-        rendition.annotations.add('highlight', cfiRange);
+      const addNote = async (cfiRange: string) => {
+        setNoteCFI(cfiRange);
       }
 
       rendition.on('rendered', () => {
@@ -133,7 +129,26 @@ export function Viewer(props: IViewerProps) {
   });
 
   return (
-    <div id='epub-viewer' className={css.viewer} />
+    <>
+      <div id='epub-viewer' className={css.viewer} />
+      {
+        noteCFI && (
+          <Tools
+            notes={props.notes}
+            cfi={noteCFI}
+            onChangeNote={(action, note) => {
+              if (action === ENoteAction.Delete) {
+                rendition.annotations.remove(note.cfi, 'highlight');
+              } else if (action === ENoteAction.Add) {
+                rendition.annotations.add('highlight', note.cfi);
+                note.text = preContent.range(note.cfi).toString();
+                console.log(note);
+              }
+            }} 
+          />
+        )
+      }
+    </>
   )
 }
 

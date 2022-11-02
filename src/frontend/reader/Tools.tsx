@@ -8,40 +8,25 @@ import * as React from 'react';
 import {IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
-import {IBookNote, TBookType} from '../../interfaces/protocols';
-import {ENoteAction, IBookIndex} from './common';
+import {checkNoteMark, ENoteAction, IBookNoteParsed, splitCFI} from './common';
 
 interface IToolsProps {
-  notes: IBookNote[];
-  currentPos: number;
-  requestMark: boolean;
-  // when requestMark is true
-  // if rangePos is undefined then switch bookmark
-  // else show note pane
-  requestStart?: string | number;
-  requestLength?: number;
-  onChangeNote(action: ENoteAction, note: IBookNote): void;
+  notes: IBookNoteParsed[];
+  cfi: string;
+  onChangeNote(action: ENoteAction, note: IBookNoteParsed): void;
 }
 
-export function Notes(props: IToolsProps) {
-  if (!props.notes?.length) {
-    return null;
-  }
-
+export function Tools(props: IToolsProps) {
   React.useEffect(() => {
-    
+    const [start, end] = splitCFI(props.cfi);
+    const status = checkNoteMark(props.notes, start, end);
+
+    console.log(status);
   });
 
   return (
     <div className={css.tools}>
-      <div className={css.toolsBookmark}>
-        <IconButton
-          type="leaf"
-          color="grey"
-          size="large"
-          // onClick={() => props.onChangeNote(ENotesAction.Add)}
-        />
-      </div>
+      
     </div>
   )
 }

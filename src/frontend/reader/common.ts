@@ -63,17 +63,22 @@ export function mergeCFI(cfi1: string, cfi2: string): string {
   return `epubcfi(/6/4!/4/${base.join('/')},/${r1.join('/')},/${r2.join('/')})`;
 }
 
+export function splitCFI(cfi: string) {
+  const base = parser.getPathComponent(cfi);
+  const [s, e] = parser.getRange(cfi);
+  
+  return [`epubcfi(/6/4!/4${base}${s})`, `epubcfi(/6/4!/4${base}${e}`];
+}
+
 export interface INoteMarkStatus {
   exist: boolean;
   index: number;
 }
 
-export function checkNoteMark(notes: IBookNoteParsed[], note: IBookNoteParsed): INoteMarkStatus {
+export function checkNoteMark(notes: IBookNoteParsed[], start: string, end: string): INoteMarkStatus {
   if (!notes.length) {
     return {exist: false, index: 0};
   }
-
-  const {start, end} = note;
 
   for (let index = 0; index < notes.length; index += 1) {
     const {start: s, end: e} = notes[index];
