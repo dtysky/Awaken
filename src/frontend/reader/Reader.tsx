@@ -113,13 +113,13 @@ export default function Reader(props: IReaderProps) {
                     setCurrentIndex(index);
                   }}
                 />
-              ) : (
+              ) : showNotes ? (
                 <Notes
                   bookmarks={bookmarks}
                   notes={notes}
                   onJump={note => jump?.(EJumpAction.CFI, note.start)}
                 />    
-              )
+              ) : null
             }
           </Sidebar>
         </div>
@@ -140,6 +140,7 @@ export default function Reader(props: IReaderProps) {
               setBookmarkStatus(checkNoteMark(bookmarks, info.start, info.end));
             }
           }}
+          onChangeNotes={setNotes}
         />
         {
           range && (

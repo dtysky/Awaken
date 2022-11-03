@@ -29,11 +29,11 @@ export interface IViewerProps {
   ): void;
   onBookmarkInfo(info: IBookNoteParsed): void;
   onProgress(progress: number): void;
+  onChangeNotes(notes: IBookNoteParsed[]): void;
 }
 
 type TState = 'Init' | 'Loading' | 'Ready';
 
-let preContent: ePub.Contents;
 let rendition: ePub.Rendition;
 let idToHref: {[id: string]: string};
 function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
@@ -46,6 +46,7 @@ function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
 
 export function Viewer(props: IViewerProps) {
   const [state, setState] = React.useState<TState>('Init');
+  const [content, setContent] = React.useState<ePub.Contents>();
   const [noteCFI, setNoteCFI] = React.useState<string>('');
 
   function updateProgress(location) {
@@ -121,9 +122,10 @@ export function Viewer(props: IViewerProps) {
       }
 
       rendition.on('rendered', () => {
-        preContent?.off('selected', addNote);
-        preContent = rendition.getContents()[0];
-        preContent?.on('selected', addNote);
+        content?.off('selected', addNote);
+        const c = rendition.getContents()[0];
+        c?.on('selected', addNote);
+        setContent(c);
       });
     }
   });
@@ -131,23 +133,16 @@ export function Viewer(props: IViewerProps) {
   return (
     <>
       <div id='epub-viewer' className={css.viewer} />
-      {
-        noteCFI && (
-          <Tools
-            notes={props.notes}
-            cfi={noteCFI}
-            onChangeNote={(action, note) => {
-              if (action === ENoteAction.Delete) {
-                rendition.annotations.remove(note.cfi, 'highlight');
-              } else if (action === ENoteAction.Add) {
-                rendition.annotations.add('highlight', note.cfi);
-                note.text = preContent.range(note.cfi).toString();
-                console.log(note);
-              }
-            }} 
-          />
-        )
-      }
+      <Tools
+        notes={props.notes}
+        rendition={rendition}
+        content={content}
+        cfi={noteCFI}
+        onChangeNotes={notes => {
+          setNoteCFI('');
+          props.onChangeNotes(notes);
+        }}
+      />
     </>
   )
 }
