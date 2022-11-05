@@ -5,11 +5,10 @@
  * @Date   : 2022/10/29 22:07:26
  */
 import * as React from 'react';
-import {Card, Postcard} from 'hana-ui';
+import {Modal, TextArea, Postcard, IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
-import {IBookNote} from '../../interfaces/protocols';
-import {IBookNoteParsed} from './common';
+import {changeNote, ENoteAction, IBookNoteParsed} from './common';
 
 interface INotesProps {
   bookmarks: IBookNoteParsed[];
@@ -18,6 +17,10 @@ interface INotesProps {
 }
 
 export function Notes(props: INotesProps) {
+  const [showModal, setShowModal] = React.useState<boolean>(false);
+  const [noteIndex, setNoteIndex] = React.useState<number>();
+  const [annotation, setAnnotation] = React.useState<string>('');
+
   return (
     <div className={css.notesContent}>
       <>
@@ -38,7 +41,7 @@ export function Notes(props: INotesProps) {
       </>
       <>
       {
-        props.notes.map(item => (
+        props.notes.map((item, index) => (
           <div
             key={item.cfi}
             className={css.notesItem}
@@ -48,6 +51,13 @@ export function Notes(props: INotesProps) {
               title="笔记"
               subtitle={`第${item.page}页`}
             >
+              <IconButton
+                type='edit'
+                onClick={() => {
+                  setNoteIndex(index);
+                  setShowModal(true);
+                }}
+              />
               <div className={css.notesText}>
                 {item.text}
               </div>
@@ -59,6 +69,26 @@ export function Notes(props: INotesProps) {
         ))
       }
       </>
+
+      <Modal
+        show={showModal}
+        confirm={() => {
+          const note = props.notes[noteIndex];
+          note.annotation = annotation;
+          changeNote(props.notes, note, {exist: true, index: noteIndex}, ENoteAction.Update);
+          setShowModal(false);
+        }}
+        cancel={() => {
+          const note = props.notes[noteIndex];
+          setAnnotation(note.annotation);
+          setShowModal(false);
+        }}
+      >
+        <TextArea
+          value={annotation}
+          onChange={e => setAnnotation((e.target as any).value)}
+        />
+      </Modal>
     </div>
   )
 }

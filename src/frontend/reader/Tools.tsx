@@ -6,10 +6,10 @@
  */
 import * as React from 'react';
 import ePub, {EpubCFI} from 'epubjs';
-import {IconButton} from 'hana-ui';
+import {IconButton, Modal, TextArea} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
-import {checkNoteMark, ENoteAction, IBookNoteParsed, splitCFI} from './common';
+import {changeNote, checkNoteMark, ENoteAction, IBookNoteParsed, INoteMarkStatus, splitCFI} from './common';
 
 interface IToolsProps {
   notes: IBookNoteParsed[];
@@ -22,7 +22,10 @@ interface IToolsProps {
 let preCFI: string;
 export function Tools(props: IToolsProps) {
   const [show, setShow] = React.useState<boolean>(false);
+  const [showModal, setShowModal] = React.useState<boolean>(false);
+  const [annotation, setAnnotation] = React.useState<string>('');
   const [note, setNote] = React.useState<IBookNoteParsed>();
+  const [status, setStatus] = React.useState<INoteMarkStatus>();
   const [x, setX] = React.useState<number>();
   const [y, setY] = React.useState<number>();
 
@@ -34,35 +37,32 @@ export function Tools(props: IToolsProps) {
     const {rendition, content, cfi, notes} = props;
     const [start, end] = splitCFI(cfi);
     const status = checkNoteMark(notes, start, end);
-    console.log(status);
+    setStatus(status);
 
     const range: Range = content.range(cfi);
     if (status.exist) {
-      setNote(notes[status.index]);
+      const note = notes[status.index];
+      setNote(note);
+      setAnnotation(note.annotation);
     } else {
       rendition.annotations.add('highlight', cfi);
       const page = rendition.book.locations.locationFromCfi(cfi) as unknown as number;
-      setNote({
+      const note = {
         cfi: cfi, start, end, page,
         text: range.toString(),
         annotation: ''
-      });
+      };
+      changeNote(props.notes, note, status, ENoteAction.Add);
+      setNote(note);
     }
 
     preCFI = cfi;
     const {x, y, width, height} = range.getBoundingClientRect();
+    const cw = document.getElementById('epub-viewer').clientWidth;
 
-    setX(x + width / 2);
+    setX(x % cw + width / 2);
     setY(y + height / 2);
     setShow(true);
-
-    // if (action === ENoteAction.Delete) {
-    //   rendition.annotations.remove(note.cfi, 'highlight');
-    // } else if (action === ENoteAction.Add) {
-    //   rendition.annotations.add('highlight', note.cfi);
-    //   note.text = preContent.range(note.cfi).toString();
-    //   console.log(note);
-    // }
   });
 
   return (
@@ -80,11 +80,35 @@ export function Tools(props: IToolsProps) {
         >
           <IconButton
             type='error'
+            onClick={() => {
+              changeNote(props.notes, note, status, ENoteAction.Delete);
+              props.rendition.annotations.remove(note.cfi, 'highlight');
+            }}
           />
           <IconButton
             type='edit'
+            onClick={() => setShowModal(true)}
           />
         </div>
+
+        <Modal
+          show={showModal}
+          confirm={() => {
+            note.annotation = annotation;
+            changeNote(props.notes, note, status, ENoteAction.Update);
+            setNote(note);
+            setShowModal(false);
+          }}
+          cancel={() => {
+            setAnnotation(note.annotation);
+            setShowModal(false);
+          }}
+        >
+          <TextArea
+            value={annotation}
+            onChange={e => setAnnotation((e.target as any).value)}
+          />
+        </Modal>
     </div>
   )
 }

@@ -83,9 +83,9 @@
 .notes {
   position: absolute;
   z-index: 10;
-  width: 40%;
+  width: 60%;
   min-width: 200px;
-  max-width: 320px;
+  max-width: 420px;
   height: 100%; 
 }
 
@@ -97,6 +97,28 @@
 .notesItem {
   width: 90%;
   margin: 8px 5%;
+
+  i {
+    font-size: 1.2rem;
+    position: absolute;
+    right: 4px;
+    top: 20px;
+  }
+}
+
+.notesText {
+  font-size: 1rem;
+  line-height: 1.2rem;
+  padding-left: 4px;
+  word-break: break-all;
+}
+
+.notesAnnotation {
+  font-size: 0.9rem;
+  line-height: 1rem;
+  padding-left: 12px;
+  padding-top: 4px;
+  word-break: break-all;
 }
 
 .viewer {
