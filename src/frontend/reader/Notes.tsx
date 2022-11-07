@@ -28,7 +28,7 @@ export function Notes(props: INotesProps) {
         props.bookmarks.map(item => (
           <div
             key={item.cfi}
-            className={css.notesItem}
+            className={`${css.notesItem} ${css.noteBookmark}`}
             onClick={() => props.onJump(item)}
           >
             <Postcard
@@ -45,20 +45,28 @@ export function Notes(props: INotesProps) {
           <div
             key={item.cfi}
             className={css.notesItem}
-            onClick={() => props.onJump(item)}
           >
             <Postcard
               title="笔记"
               subtitle={`第${item.page}页`}
             >
-              <IconButton
-                type='edit'
-                onClick={() => {
-                  setNoteIndex(index);
-                  setShowModal(true);
-                }}
-              />
-              <div className={css.notesText}>
+              <div className={css.notesActions}>
+                <IconButton
+                  type='copy'
+                  onClick={() => navigator.clipboard.writeText(item.text + '\n\n' + item.annotation)}
+                />
+                <IconButton
+                  type='edit'
+                  onClick={() => {
+                    setNoteIndex(index);
+                    setShowModal(true);
+                  }}
+                />
+              </div>
+              <div
+                className={css.notesText}
+                onClick={() => props.onJump(item)}
+              >
                 {item.text}
               </div>
               <div className={css.notesAnnotation}>

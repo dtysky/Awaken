@@ -79,6 +79,10 @@ export function Viewer(props: IViewerProps) {
             convertEPUBIndex(t, indexes);
           });
 
+          props.notes.forEach(note => {
+            rendition.annotations.add('highlight', note.cfi);
+          });
+
           const jump = (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => {
             if (action !== EJumpAction.Page) {
               rendition.on('relocated', updateProgress);

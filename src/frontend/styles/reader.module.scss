@@ -97,12 +97,21 @@
 .notesItem {
   width: 90%;
   margin: 8px 5%;
+  user-select: none;
+}
+
+.noteBookmark {
+  cursor: pointer;
+}
+
+.notesActions {
+  position: absolute;
+  right: 4px;
+  top: 20px;
 
   i {
     font-size: 1.2rem;
-    position: absolute;
-    right: 4px;
-    top: 20px;
+    margin-left: 8px;
   }
 }
 
@@ -111,6 +120,7 @@
   line-height: 1.2rem;
   padding-left: 4px;
   word-break: break-all;
+  cursor: pointer;
 }
 
 .notesAnnotation {

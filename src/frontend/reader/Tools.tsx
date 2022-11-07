@@ -45,10 +45,11 @@ export function Tools(props: IToolsProps) {
       setNote(note);
       setAnnotation(note.annotation);
     } else {
-      rendition.annotations.add('highlight', cfi);
+      const annotation = rendition.annotations.add('highlight', cfi);
       const page = rendition.book.locations.locationFromCfi(cfi) as unknown as number;
       const note = {
         cfi: cfi, start, end, page,
+        anchor: (annotation as any).anchor,
         text: range.toString(),
         annotation: ''
       };
@@ -84,6 +85,10 @@ export function Tools(props: IToolsProps) {
               changeNote(props.notes, note, status, ENoteAction.Delete);
               props.rendition.annotations.remove(note.cfi, 'highlight');
             }}
+          />
+          <IconButton
+            type='copy'
+            onClick={() => navigator.clipboard.writeText(note.text + '\n\n' + note.annotation)}
           />
           <IconButton
             type='edit'
