@@ -45,11 +45,10 @@ export function Tools(props: IToolsProps) {
       setNote(note);
       setAnnotation(note.annotation);
     } else {
-      const annotation = rendition.annotations.add('highlight', cfi);
+      rendition.annotations.add('highlight', cfi);
       const page = rendition.book.locations.locationFromCfi(cfi) as unknown as number;
       const note = {
         cfi: cfi, start, end, page,
-        anchor: (annotation as any).anchor,
         text: range.toString(),
         annotation: ''
       };

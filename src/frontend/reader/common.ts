@@ -64,10 +64,11 @@ export function mergeCFI(cfi1: string, cfi2: string): string {
 }
 
 export function splitCFI(cfi: string) {
+  const chapter = parser.getChapterComponent(cfi);
   const base = parser.getPathComponent(cfi);
   const [s, e] = parser.getRange(cfi);
   
-  return [`epubcfi(/6/4!/4${base}${s})`, `epubcfi(/6/4!/4${base}${e}`];
+  return [`${chapter}!${base}${s})`, `${chapter}!${base}${e}`];
 }
 
 export interface INoteMarkStatus {

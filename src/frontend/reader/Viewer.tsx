@@ -99,7 +99,11 @@ export function Viewer(props: IViewerProps) {
             }
 
             if (action === EJumpAction.CFI) {
-              rendition.display(cfiOrPageOrIndex as string);
+              // first, jump to chapter
+              rendition.display(cfiOrPageOrIndex as string).then(() => {
+                // then, jump to note
+                rendition.display(cfiOrPageOrIndex as string);
+              })
               return;
             }
 
