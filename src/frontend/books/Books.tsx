@@ -9,15 +9,25 @@ import {IBook} from '../../interfaces/protocols';
 import ColorHash from 'color-hash'
 
 import css from '../styles/books.module.scss';
+import {Menu} from './Menu';
+import {ISystemSettings} from '../../interfaces';
 
 export interface IBooksProps {
+  settings: ISystemSettings;
   books: IBook[];
   onSelect(index: number): void;
+  onUpdateSettings(config: ISystemSettings): void;
+  onChangeBooks(books: IBook[], remove: boolean): void;
 }
 
 export default function Books(props: IBooksProps) {
   return (
     <div className={css.books}>
+      <Menu
+        settings={props.settings}
+        onUpdateSettings={props.onUpdateSettings}
+        onAddBooks={books => props.onChangeBooks(books, false)}
+      />
       <div className={css.list}>
         {props.books.map((book, index) => (
           <Book

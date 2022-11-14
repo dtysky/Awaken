@@ -4,7 +4,7 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:11:02
  */
-import {ISystemConfig} from './index';
+import {ISystemSettings} from './index';
 
 export interface ILogger {
   info(...args: any): void;
@@ -25,8 +25,8 @@ export interface IFileSystem {
 export interface IWorker {
   logger: ILogger;
   fs: IFileSystem;
-  loadConfig(): Promise<ISystemConfig>;
-  saveConfig<TKey extends keyof ISystemConfig>(
-    key: TKey, value: ISystemConfig[TKey]
+  loadSettings(): Promise<ISystemSettings>;
+  saveSettings<TKey extends keyof ISystemSettings>(
+    key: TKey, value: ISystemSettings[TKey]
   ): Promise<void>;
 }

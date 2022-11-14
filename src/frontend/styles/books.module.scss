@@ -5,23 +5,42 @@
  * @Date   : 2022/9/18 16:26:16
  */
 .books {
+  position: relative;
   width: 100%;
   height: 100%;
 }
 
-.list {
-  width: 80%;
-  margin-top: 10%;
+.menu {
+  position: absolute;
+  width: 90%;
+  height: 3rem;
+  left: 5%;
+  top: 2%;
   display: flex;
-  justify-content: center;
+  justify-content: start;
+  align-items: center;
+  font-size: 1.4rem;
+}
+
+.menuItem {
+  margin: 0 0.5rem;
+}
+
+.list {
+  position: absolute;
+  width: 90%;
+  left: 5%;
+  top: 10%;
+  display: flex;
 }
 
 .book {
   position: relative;
   width: 26%;
-  margin: 2%;
+  margin-right: 4%;
   height: 0;
   padding-bottom: 36%;
+  cursor: pointer;
 }
 
 .bookInfo {

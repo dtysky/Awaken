@@ -14,4 +14,10 @@ html, body, #container {
   margin: 0;
   padding: 0;
   outline: 0;
+
+  .hana-modal-main {
+    min-width: 320px !important;
+    max-width: 600px;
+    width: 80%;
+  }
 }

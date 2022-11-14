@@ -5,7 +5,6 @@
  * @Date   : 2022/9/16 23:09:30
  */
 import * as React from 'react';
-import ePub, {EpubCFI} from 'epubjs';
 import {IconButton, Modal, TextArea} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';

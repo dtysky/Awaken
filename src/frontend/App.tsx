@@ -18,7 +18,7 @@ type TState = 'Loading' | 'Books' | 'Reader';
 
 export default function App() {
   const [config, setConfig] = React.useState<IConfig>({
-    folder: '',
+    settings: undefined,
     books: []
   });
   const [state, setState] = React.useState<TState>('Loading');
@@ -28,7 +28,7 @@ export default function App() {
     if (state === 'Loading') {
       loadConfig().then(config => {
         setConfig({
-          folder: config.folder,
+          settings: config.settings,
           books: config.books
         });
         setState('Books');
@@ -47,11 +47,14 @@ export default function App() {
   if (state === 'Books') {
     return (
       <Books
+        settings={config.settings}
         books={config.books}
         onSelect={index => {
           setCurrent(index);
           setState('Reader');
         }}
+        onChangeBooks={(books, remove) => {}}
+        onUpdateSettings={settings => {}}
       />
     );
   }
@@ -64,7 +67,7 @@ export default function App() {
       progress={config.books[current].progress}
       onUpdateProgress={progress => {
         config.books[current].progress = progress;
-        saveBooks(config.folder, config.books);
+        saveBooks(config.settings.folder, config.books);
       }}
       onClose={() => setState('Books')}
     />

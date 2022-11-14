@@ -4,7 +4,7 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:11:10
  */
-export interface ISystemConfig {
+export interface ISystemSettings {
   folder: string;
   webDav: {
     user: string;

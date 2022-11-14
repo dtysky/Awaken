@@ -5,20 +5,21 @@
  * @Date   : 2022/9/16 23:18:24
  */
 import bk from '../backend';
+import {ISystemSettings} from '../interfaces';
 import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
 
 export interface IConfig {
-  folder: string;
+  settings: ISystemSettings;
   books: IBook[];
 }
 
 export async function loadConfig(): Promise<IConfig> {
-  const config = await bk.worker.loadConfig();
-  console.log(config)
+  const settings = await bk.worker.loadSettings();
+  console.log(settings)
   // todo: read books.json to compare
 
   return {
-    folder: config.folder,
+    settings: settings,
     books: [
       {
         hash: '1',
@@ -51,6 +52,10 @@ export async function loadConfig(): Promise<IConfig> {
   }
 }
 
+export async function saveSettings(settings: ISystemSettings) {
+  
+}
+
 export async function saveBooks(folder: string, books: IBook[]) {
 
 }
@@ -68,4 +73,8 @@ export async function loadBook(filePath: string): Promise<IBookContent> {
       notes: []
     }
   }
+}
+
+export async function checkAuth(user: string, password: string): Promise<boolean> {
+  return false;
 }

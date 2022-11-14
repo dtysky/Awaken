@@ -6,7 +6,7 @@
  */
 import {fs} from '@tauri-apps/api'
 import {IWorker, TBaseDir} from '../../interfaces/IWorker';
-import {ISystemConfig} from '../../interfaces';
+import {ISystemSettings} from '../../interfaces';
 
 let BOOKS_FOLDER: string;
 
@@ -25,7 +25,7 @@ function processPath(fp: string, base: TBaseDir): {base: number, fp: string} {
 }
 
 export const worker: IWorker = {
-  loadConfig: async () => {
+  loadSettings: async () => {
     BOOKS_FOLDER = 'H:/ComplexMind/Awaken/test';
 
     return {
@@ -43,9 +43,11 @@ export const worker: IWorker = {
       }
     };
   },
-  async saveConfig<TKey extends keyof ISystemConfig>(
-    key: keyof ISystemConfig, value: ISystemConfig[TKey]
-  ) {},
+  async saveSettings<TKey extends keyof ISystemSettings>(
+    key: keyof ISystemSettings, value: ISystemSettings[TKey]
+  ) {
+    
+  },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);
