@@ -10,9 +10,12 @@ import Reader from './reader/Reader';
 import {IBook} from '../interfaces/protocols';
 import Books from './books/Books';
 import {IConfig, loadConfig, saveBooks} from './utils';
+import webdav from './webdav';
 
 import css from './styles/app.module.scss';
 import './styles/global.scss';
+
+webdav.changeRemote('http://127.0.0.1:8888/dav', 'dtysky', '114514');
 
 type TState = 'Loading' | 'Books' | 'Reader';
 
@@ -54,7 +57,9 @@ export default function App() {
           setState('Reader');
         }}
         onChangeBooks={(books, remove) => {}}
-        onUpdateSettings={settings => {}}
+        onUpdateSettings={settings => {
+          // checkAuth(settings.webDav.user, settings.webDav.password)
+        }}
       />
     );
   }

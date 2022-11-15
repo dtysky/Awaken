@@ -53,7 +53,7 @@ export async function loadConfig(): Promise<IConfig> {
 }
 
 export async function saveSettings(settings: ISystemSettings) {
-  
+
 }
 
 export async function saveBooks(folder: string, books: IBook[]) {
@@ -73,8 +73,4 @@ export async function loadBook(filePath: string): Promise<IBookContent> {
       notes: []
     }
   }
-}
-
-export async function checkAuth(user: string, password: string): Promise<boolean> {
-  return false;
 }

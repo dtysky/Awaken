@@ -7,6 +7,7 @@
 export interface ISystemSettings {
   folder: string;
   webDav: {
+    url: string;
     user: string;
     password: string;
   };

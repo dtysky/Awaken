@@ -54,7 +54,10 @@ export function Menu(props: IMenuProps) {
         confirm={() => {
           const text: string[] = [];
 
-          if (props.settings.webDav.user !== settings.webDav.user) {
+          if (
+            props.settings.webDav.url !== settings.webDav.url ||
+            props.settings.webDav.user !== settings.webDav.user
+          ) {
             text.push('WebDAV账号更新，重新同步远端书籍。');
           }
 
@@ -86,7 +89,18 @@ export function Menu(props: IMenuProps) {
                 </FormItem>
               </FormGroup>
     
-              <FormGroup label="WebDAV">
+              <FormGroup label="WebDAV" elementStyle={{flexFlow: 'column'}}>
+                <FormItem label="地址" status='normal'>
+                  <Text
+                    value={settings.webDav.url}
+                    auto
+                    onChange={e => {
+                      console.log(e)
+                      settings.webDav.url = (e.target as any).value;
+                    }}
+                  />
+                </FormItem>
+
                 <FormItem label="用户名" status='normal'>
                   <Text
                     value={settings.webDav.user}

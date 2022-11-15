@@ -81,7 +81,10 @@ module.exports = (env) => {
       port: 8888,
       hot: true,
       client: {
-        overlay: false
+        overlay: false,
+      },
+      proxy: {
+        '/dav': 'http://127.0.0.1:8889'
       }
     }
   };

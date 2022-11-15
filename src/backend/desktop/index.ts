@@ -31,6 +31,7 @@ export const worker: IWorker = {
     return {
       folder: BOOKS_FOLDER,
       webDav: {
+        url: '',
         user: '',
         password: ''
       },
@@ -46,7 +47,7 @@ export const worker: IWorker = {
   async saveSettings<TKey extends keyof ISystemSettings>(
     key: keyof ISystemSettings, value: ISystemSettings[TKey]
   ) {
-    
+
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {

@@ -11,7 +11,7 @@ export interface IBook {
   type: TBookType;
   name: string;
   author: string;
-  cover?: string;
+  cover: string;
   filePath: string;
   progress: number;
 }
