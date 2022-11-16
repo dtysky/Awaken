@@ -25,12 +25,15 @@
       },
       "dialog": {
         "open": true
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {
       "active": true,
       "category": "DeveloperTool",
-      "copyright": "",
+      "copyright": "LGPL",
       "deb": {
         "depends": []
       },
@@ -42,7 +45,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.dtysky.Awaken",
       "longDescription": "",
       "macOS": {
         "entitlements": null,

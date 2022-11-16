@@ -4,50 +4,95 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:11:56
  */
-import {fs} from '@tauri-apps/api'
-import {IWorker, TBaseDir} from '../../interfaces/IWorker';
+import {fs, path, dialog} from '@tauri-apps/api'
+import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {ISystemSettings} from '../../interfaces';
 
 let BOOKS_FOLDER: string;
 
 function processPath(fp: string, base: TBaseDir): {base: number, fp: string} {
   switch (base) {
-    case 'AppData':
-      return {base: fs.BaseDirectory.Data, fp};
+    case 'Settings':
+      return {base: fs.BaseDirectory.App, fp};
     case 'Log':
       return {base: fs.BaseDirectory.Log, fp};
     case 'Tmp':
-      return {base: fs.BaseDirectory.Temp, fp};
-    default:
+      return {base: fs.BaseDirectory.Cache, fp: `com.dtysky.Awaken/${fp}`};
+    case 'Books':
       return {base: undefined, fp: `${BOOKS_FOLDER}/${fp}`};
+    default:
+      return {base: undefined, fp};
   }
-
 }
+
+const SETTINGS_FP = processPath('settings.json', 'Settings');
 
 export const worker: IWorker = {
   loadSettings: async () => {
-    BOOKS_FOLDER = 'H:/ComplexMind/Awaken/test';
+    let settings: ISystemSettings;
 
-    return {
-      folder: BOOKS_FOLDER,
-      webDav: {
-        url: '',
-        user: '',
-        password: ''
-      },
-      read: {
-        font: '',
-        fontSize: 16,
-        lineSpace: 16,
-        background: '#fff',
-        light: 1
-      }
-    };
+    try {
+      await fs.exists(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
+      const txt = await fs.readTextFile(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
+      settings = JSON.parse(txt);
+    } catch(error) {
+      settings = {
+        folder: '',
+        webDav: {
+          url: '',
+          user: '',
+          password: ''
+        },
+        read: {
+          font: '',
+          fontSize: 16,
+          lineSpace: 16,
+          background: '#fff',
+          light: 1
+        }
+      };
+
+      const dp = await path.appDir();
+      await fs.createDir(dp, {recursive: true});
+      await fs.writeTextFile(SETTINGS_FP.fp, JSON.stringify(settings), {dir: SETTINGS_FP.base});
+    }
+
+    BOOKS_FOLDER = settings.folder;
+
+    return settings;
   },
-  async saveSettings<TKey extends keyof ISystemSettings>(
-    key: keyof ISystemSettings, value: ISystemSettings[TKey]
-  ) {
+  async saveSettings(settings: ISystemSettings) {
+    await fs.writeTextFile(SETTINGS_FP.fp, JSON.stringify(settings), {dir: SETTINGS_FP.base});
+    BOOKS_FOLDER = settings.folder;
+  },
+  async selectFolder() {
+    const selected = await dialog.open({
+      title: '选择目录',
+      directory: true
+    });
 
+    return selected as string;
+  },
+  async selectBook() {
+    const selected = await dialog.open({
+      title: '选择EPub书籍',
+      multiple: true,
+      filters: [{
+        name: 'EPub',
+        extensions: ['epub']
+      }]
+    });
+
+    if (Array.isArray(selected)) {
+      return selected;
+    } else if (selected === null) {
+      return [];
+    } else {
+      return [selected];
+    }
+  },
+  async showMessage(msg: string, type: TToastType, title?: string) {
+    await dialog.message(msg, {type, title});
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {

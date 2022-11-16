@@ -9,8 +9,13 @@ import {IBook, IBookConfig} from '../interfaces/protocols';
 
 class WebDAV {
   private _client: WebDAVClient;
+  private _folder: string;
 
-  public async changeRemote(url: string, user: string, password: string): Promise<boolean> {
+  get connected() {
+    return !!this._client;
+  }
+
+  public async changeRemote(url: string, user: string, password: string) {
     this._client = createClient(
       url,
       {
@@ -20,24 +25,32 @@ class WebDAV {
       }
     );
 
-    console.log(await this._client.getDirectoryContents('/'));
-
-    return false;
+    try {
+      await this._client.getDirectoryContents('/');
+    } catch (error) {
+      this._client = undefined;
+      throw error;
+    }
   }
 
-  public changeLocal(folder: string) {
+  public async changeLocal(folder: string) {
+    if (!this._folder) {
+      this._folder = folder;
+      return;
+    }
 
+    // copy from origin to new dest
   }
 
-  // public async syncBooks(books: IBook[]): IBook[] {
+  public async syncBooks(books: IBook[]): Promise<IBook[]> {
+    return books;
+  }
+
+  // public async addBook(fp: string, books: IBook[]): IBook[] {
 
   // }
 
-  // public async addBook(fp: string): IBook[] {
-
-  // }
-
-  // public async deleteBook(book: IBook): IBook[] {
+  // public async deleteBook(book: IBook, books: IBook[]): IBook[] {
 
   // }
 

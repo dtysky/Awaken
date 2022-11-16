@@ -13,47 +13,48 @@ export interface IConfig {
   books: IBook[];
 }
 
-export async function loadConfig(): Promise<IConfig> {
+export async function loadSettings(): Promise<ISystemSettings> {
   const settings = await bk.worker.loadSettings();
   console.log(settings)
-  // todo: read books.json to compare
 
-  return {
-    settings: settings,
-    books: [
-      {
-        hash: '1',
-        type: 'EPUB',
-        name: '二十九',
-        author: '瞬光寂暗',
-        cover: '',
-        filePath: '二十九.epub',
-        progress: 0
-      },
-      {
-        hash: '2',
-        type: 'EPUB',
-        name: '我为什么写作',
-        author: '瞬光寂暗',
-        cover: '',
-        filePath: '我为什么写作.epub',
-        progress: 0
-      },
-      {
-        hash: '3',
-        type: 'EPUB',
-        name: '乡土中国',
-        author: '费孝通',
-        cover: '',
-        filePath: '乡土中国.epub',
-        progress: 0
-      }
-    ]
-  }
+  return settings;
 }
 
 export async function saveSettings(settings: ISystemSettings) {
+  return bk.worker.saveSettings(settings);
+}
 
+export async function loadBooks() {
+  let books: IBook[] = [];
+  try {
+    const txt = await bk.worker.fs.readFile('books.json', 'utf8', 'Books') as string;
+    books = JSON.parse(txt);
+  } catch (error) {
+    await bk.worker.fs.writeFile('books.json', '[]', 'Books');
+  }
+
+  return books;
+}
+
+export async function selectFolder(requireRes: boolean): Promise<string> {
+  const folder = await bk.worker.selectFolder();
+
+  if (!folder && !requireRes) {
+    return folder;
+  }
+
+  const content = await bk.worker.fs.readDir(folder, 'None');
+
+  if (content?.length) {
+    await bk.worker.showMessage('目录非空，请重新选择！', 'error');
+    return selectFolder(requireRes);
+  }
+
+  return folder;
+}
+
+export async function selectBook() {
+  return bk.worker.selectBook();
 }
 
 export async function saveBooks(folder: string, books: IBook[]) {

@@ -12,7 +12,8 @@ export interface ILogger {
   error(...args: any): void;
 }
 
-export type TBaseDir = 'Books' | 'AppData' | 'Tmp' | 'Log';
+export type TBaseDir = 'Books' | 'Settings' | 'Tmp' | 'Log' | 'None';
+export type TToastType = 'info' | 'warning' | 'error';
 
 export interface IFileSystem {
   readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir): Promise<string | ArrayBuffer>;
@@ -26,7 +27,8 @@ export interface IWorker {
   logger: ILogger;
   fs: IFileSystem;
   loadSettings(): Promise<ISystemSettings>;
-  saveSettings<TKey extends keyof ISystemSettings>(
-    key: TKey, value: ISystemSettings[TKey]
-  ): Promise<void>;
+  saveSettings(settings: ISystemSettings): Promise<void>;
+  selectFolder(): Promise<string>;
+  selectBook(): Promise<string[]>;
+  showMessage(msg: string, type: TToastType, title?: string): Promise<void>;
 }

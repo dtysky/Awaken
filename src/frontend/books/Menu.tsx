@@ -10,6 +10,7 @@ import {ButtonGroup, Button, Modal, Form, FormItem, Text, FormGroup} from 'hana-
 import css from '../styles/books.module.scss';
 import {ISystemSettings} from '../../interfaces';
 import {IBook} from '../../interfaces/protocols';
+import { selectFolder } from '../utils';
 
 interface IMenuProps {
   settings: ISystemSettings;
@@ -22,6 +23,7 @@ export function Menu(props: IMenuProps) {
   const [showConfig, setShowConfig] = React.useState<boolean>(false);
   const [showConfirm, setShowConfirm] = React.useState<boolean>(false);
   const [confirmText, setConfirmText] = React.useState<string[]>([]);
+  const forceUpdate: () => void = React.useState({})[1].bind(null, {})
 
   return (
     <>
@@ -85,17 +87,27 @@ export function Menu(props: IMenuProps) {
                 </FormItem>
     
                 <FormItem>
-                  <Button>选择</Button>
+                  <Button
+                    onClick={() => {
+                      selectFolder(false).then(folder => {
+                        if (folder) {
+                          settings.folder = folder;
+                          forceUpdate();
+                        }
+                      })
+                    }}
+                  >
+                    选择
+                  </Button>
                 </FormItem>
               </FormGroup>
     
               <FormGroup label="WebDAV" elementStyle={{flexFlow: 'column'}}>
                 <FormItem label="地址" status='normal'>
                   <Text
-                    value={settings.webDav.url}
+                    defaultValue={settings.webDav.url}
                     auto
                     onChange={e => {
-                      console.log(e)
                       settings.webDav.url = (e.target as any).value;
                     }}
                   />
@@ -103,10 +115,9 @@ export function Menu(props: IMenuProps) {
 
                 <FormItem label="用户名" status='normal'>
                   <Text
-                    value={settings.webDav.user}
+                    defaultValue={settings.webDav.user}
                     auto
                     onChange={e => {
-                      console.log(e)
                       settings.webDav.user = (e.target as any).value;
                     }}
                   />
@@ -114,7 +125,7 @@ export function Menu(props: IMenuProps) {
     
                 <FormItem label="密码" status='normal'>
                   <Text
-                    value={settings.webDav.password}
+                    defaultValue={settings.webDav.password}
                     auto
                     onChange={e => {
                       settings.webDav.password = (e.target as any).value;
