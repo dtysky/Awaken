@@ -20,7 +20,7 @@ class WebDAV {
       }
     );
 
-    console.log(this._client.getDirectoryContents('/'));
+    console.log(await this._client.getDirectoryContents('/'));
 
     return false;
   }

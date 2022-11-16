@@ -8,7 +8,7 @@ const user = userManager.addUser('dtysky', '114514', false);
 const privilegeManager = new webdav.SimplePathPrivilegeManager();
 privilegeManager.setRights(user, '/', [ 'all' ]);
 
-const fileSystem = new webdav.PhysicalFileSystem('./test/server');
+const fileSystem = new webdav.PhysicalFileSystem('./test/server/');
 
 const server = new webdav.WebDAVServer({
   port: 8889,
@@ -16,6 +16,11 @@ const server = new webdav.WebDAVServer({
   httpAuthentication: new webdav.HTTPDigestAuthentication(userManager, 'Default realm'),
   privilegeManager: privilegeManager,
   rootFileSystem: fileSystem
+});
+
+server.beforeRequest((ctx, next) => {
+  console.log(ctx.request.url)
+  next();
 });
 
 server.start((s) => {
