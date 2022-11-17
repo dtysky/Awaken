@@ -11,9 +11,9 @@ export interface IBook {
   type: TBookType;
   name: string;
   author: string;
-  cover: string;
-  filePath: string;
-  progress: number;
+  // 以下是在打开是自动拼接
+  // 检查下`hash`目录下是否有cover
+  cover?: string;
 }
 
 // highlights and annotations
@@ -27,6 +27,7 @@ export interface IBookNote {
 }
 
 export interface IBookConfig {
+  progress: number;
   bookmarks: IBookNote[];
   notes: IBookNote[];
 }

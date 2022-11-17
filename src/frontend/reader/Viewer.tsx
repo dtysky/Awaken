@@ -5,7 +5,7 @@
  * @Date   : 2022/10/20 23:29:09
  */
 import * as React from 'react';
-import ePub, {EpubCFI} from 'epubjs';
+import ePub from 'epubjs';
 
 import css from '../styles/reader.module.scss';
 import {mergeCFI, IBookIndex, IBookNoteParsed, ENoteAction, splitCFI} from './common';

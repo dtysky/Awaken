@@ -114,6 +114,16 @@ export const worker: IWorker = {
 
       return fs.removeFile(fp, base && {dir: base});
     },
+    async createDir(dirPath: string, baseDir: TBaseDir) {
+      const {fp, base} = processPath(dirPath, baseDir);
+
+      await fs.createDir(fp, {dir: base});
+    },
+    async removeDir(dirPath: string, baseDir: TBaseDir) {
+      const {fp, base} = processPath(dirPath, baseDir);
+
+      await fs.removeDir(fp, {dir: base});
+    },
     async readDir(dirPath: string, baseDir: TBaseDir) {
       const {fp, base} = processPath(dirPath, baseDir);
 
@@ -126,12 +136,18 @@ export const worker: IWorker = {
         };
       });
     },
+    async copyFile(src: string, dst: string, baseDir: TBaseDir) {
+      const s = processPath(src, baseDir);
+      const d = processPath(dst, baseDir);
+
+      await fs.copyFile(d.fp, d.fp, {dir: s.base});
+    },
     async exists(filePath: string, baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);
 
       try {
-        await fs.exists(fp, base && {dir: base}); 
-        return true;
+        const res = await fs.exists(fp, base && {dir: base});
+        return res as unknown as boolean;
       } catch (error) {
         return false;
       }

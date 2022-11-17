@@ -10,12 +10,12 @@ import {ButtonGroup, Button, Modal, Form, FormItem, Text, FormGroup} from 'hana-
 import css from '../styles/books.module.scss';
 import {ISystemSettings} from '../../interfaces';
 import {IBook} from '../../interfaces/protocols';
-import { selectFolder } from '../utils';
+import {selectBook, selectFolder} from '../utils';
 
 interface IMenuProps {
   settings: ISystemSettings;
   onUpdateSettings(settings: ISystemSettings): void;
-  onAddBooks(books: IBook[]): void;
+  onAddBooks(files: string[]): void;
 }
 
 export function Menu(props: IMenuProps) {
@@ -43,7 +43,11 @@ export function Menu(props: IMenuProps) {
         </Button>
         <Button
           className={css.menuItem}
-          onClick={() => {}}
+          onClick={() => {
+            selectBook().then(files => {
+              props.onAddBooks(files)
+            })
+          }}
         >
           添加
         </Button>

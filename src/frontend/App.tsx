@@ -11,7 +11,7 @@ import Reader from './reader/Reader';
 import {IBook} from '../interfaces/protocols';
 import Books from './books/Books';
 import {
-  loadSettings, saveSettings, loadBooks, saveBooks,
+  loadSettings, saveSettings, loadBooks,
   selectFolder, selectBook
 } from './utils';
 import webdav from './webdav';
@@ -92,7 +92,24 @@ export default function App() {
             setCurrent(index);
             setState('Reader');
           }}
-          onChangeBooks={(bks, remove) => {}}
+          onAddBooks={async files => {
+            if (!webdav.connected) {
+              setNotify({type: 'error', content: `未连接到服务器，请现在“设定”中配置。`, duration: 4});
+              return;
+            }
+
+            setLoadingInfo('准备添加书籍...');
+            for (const file of files) {
+              setLoadingInfo(`${file} 添加中...`);
+              await webdav.addBook(file, books);
+              setLoadingInfo(`${file} 添加结束...`);
+            }
+
+            const bks = await webdav.syncBooks(books);
+            setBooks(bks);
+            setLoadingInfo('');
+          }}
+          onRemoveBook={file => {}}
           onUpdateSettings={async s => {
             let webDavChanged = settings.webDav.url !== s.webDav.url ||
               settings.webDav.user !== s.webDav.user;
@@ -116,7 +133,7 @@ export default function App() {
             if (webDavChanged) {
               setLoadingInfo('连接服务器...');
               try {
-                await webdav.changeRemote(settings.webDav.url, settings.webDav.user, settings.webDav.password)
+                await webdav.changeRemote(s.webDav.url, s.webDav.user, s.webDav.password)
                 setLoadingInfo('连接成功，开始同步文件...');
                 await webdav.syncBooks(books);
               } catch (error) {
@@ -133,15 +150,13 @@ export default function App() {
       )}
       {state === 'Reader' && (
         <Reader
-          filePath={books[current].filePath}
-          name={books[current].name}
-          type={books[current].type}
-          progress={books[current].progress}
-          onUpdateProgress={progress => {
-            books[current].progress = progress;
-            saveBooks(settings.folder, books);
+          book={books[current]}
+          onClose={async bookConfig => {
+            setLoadingInfo('与远端同步笔记和进度...');
+            await webdav.syncBook(books[current], bookConfig);
+            setState('Books');
+            setLoadingInfo('');
           }}
-          onClose={() => setState('Books')}
         />
       )}
 

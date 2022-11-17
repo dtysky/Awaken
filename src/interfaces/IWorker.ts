@@ -19,7 +19,10 @@ export interface IFileSystem {
   readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir): Promise<string | ArrayBuffer>;
   writeFile(filePath: string, content: string | ArrayBuffer, baseDir: TBaseDir): Promise<void>;
   removeFile(filePath: string, baseDir: TBaseDir): Promise<void>;
+  copyFile(src: string, dst: string, baseDir: TBaseDir): Promise<void>;
   readDir(dirPath: string, baseDir: TBaseDir): Promise<{path: string, isDir: boolean}[]>;
+  createDir(dirPath: string, baseDir: TBaseDir): Promise<void>;
+  removeDir(dirPath: string, baseDir: TBaseDir): Promise<void>;
   exists(filePath: string, baseDir: TBaseDir): Promise<boolean>;
 }
 

@@ -17,7 +17,8 @@ export interface IBooksProps {
   books: IBook[];
   onSelect(index: number): void;
   onUpdateSettings(config: ISystemSettings): void;
-  onChangeBooks(books: IBook[], remove: boolean): void;
+  onAddBooks(files: string[]): void;
+  onRemoveBook(book: IBook): void;
 }
 
 export default function Books(props: IBooksProps) {
@@ -26,7 +27,7 @@ export default function Books(props: IBooksProps) {
       <Menu
         settings={props.settings}
         onUpdateSettings={props.onUpdateSettings}
-        onAddBooks={books => props.onChangeBooks(books, false)}
+        onAddBooks={props.onAddBooks}
       />
       <div className={css.list}>
         {props.books.map((book, index) => (

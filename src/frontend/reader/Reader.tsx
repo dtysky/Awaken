@@ -7,9 +7,9 @@
 import * as React from 'react';
 import {Sidebar} from 'hana-ui';
 
-import {IBookContent, loadBook} from '../utils';
+import webdav, {IBookContent} from '../webdav';
 import {EJumpAction, Viewer} from './Viewer';
-import {IBookNote, TBookType} from '../../interfaces/protocols';
+import {IBook, IBookConfig, IBookNote, TBookType} from '../../interfaces/protocols';
 import {changeNote, checkNoteMark, convertBookNotes, IBookIndex, IBookNoteParsed, INoteMarkStatus, splitCFI} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
@@ -19,12 +19,8 @@ import {PageCtr} from './PageCtr';
 import css from '../styles/reader.module.scss';
 
 export interface IReaderProps {
-  name: string;
-  type: TBookType;
-  filePath: string;
-  progress: number;
-  onUpdateProgress(progress: number): void;
-  onClose(): void;
+  book: IBook;
+  onClose(config: IBookConfig): void;
 }
 
 type TState = 'Init' | 'Loading' | 'Parser' | 'Ready';
@@ -48,10 +44,11 @@ export default function Reader(props: IReaderProps) {
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');
-      loadBook(props.filePath).then(book => {
+      webdav.loadBook(props.book).then(book => {
         setContent(book.content);
         setBookmarks(convertBookNotes(book.config.bookmarks));
         setNotes(convertBookNotes(book.config.notes));
+        setProgress(book.config.progress);
         setState('Ready');
       }).catch(error => {
         console.error(error);
@@ -64,7 +61,7 @@ export default function Reader(props: IReaderProps) {
   if (state === 'Init' || state === 'Loading') {
     return (
       <div className={css.ready}>
-        Loading {props.name}...
+        Loading {props.book.name}...
       </div>
     );
   }
@@ -82,7 +79,7 @@ export default function Reader(props: IReaderProps) {
             setShowNotes(!showNotes);
             setShowIndexes(false);
           }}
-          onReturn={props.onClose}
+          onReturn={() => props.onClose({progress, notes, bookmarks})}
           onBookmark={() => {
             setBookmarkStatus(changeNote(bookmarks, bookmarkInfo, bookmarkStatus));
           }}

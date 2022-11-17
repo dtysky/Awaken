@@ -56,22 +56,3 @@ export async function selectFolder(requireRes: boolean): Promise<string> {
 export async function selectBook() {
   return bk.worker.selectBook();
 }
-
-export async function saveBooks(folder: string, books: IBook[]) {
-
-}
-
-export interface IBookContent {
-  content: ArrayBuffer;
-  config: IBookConfig;
-}
-
-export async function loadBook(filePath: string): Promise<IBookContent> {
-  return {
-    content: await bk.worker.fs.readFile(filePath, 'binary', 'Books') as ArrayBuffer,
-    config: {
-      bookmarks: [],
-      notes: []
-    }
-  }
-}
