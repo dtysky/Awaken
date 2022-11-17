@@ -50,11 +50,18 @@ export default function App() {
         }
 
         promise.then(() => {
+          if (s.webDav.url) {
+            return webdav.changeRemote(s.webDav.url, s.webDav.url, s.webDav.user);
+          }
+
+          return undefined;
+        }).then(() => {
           webdav.changeLocal(s.folder);
           setSettings(s);
 
           return loadBooks();
-        }).then(bks => {
+        })
+        .then(bks => {
           if (webdav.connected) {
             return webdav.syncBooks(bks);
           }
@@ -64,6 +71,8 @@ export default function App() {
           setBooks(bks);
           setLoadingInfo('');
           setState('Books');
+        }).catch(error => {
+          setNotify({type: 'error', content: `初始化失败：${error.message}`, duration: 4});
         });
       }) 
     }
@@ -107,8 +116,7 @@ export default function App() {
             if (webDavChanged) {
               setLoadingInfo('连接服务器...');
               try {
-                // await webdav.changeRemote(settings.webDav.url, settings.webDav.user, settings.webDav.password)
-                await webdav.changeRemote('http://127.0.0.1:8888/dav', 'dtysky', '114514');
+                await webdav.changeRemote(settings.webDav.url, settings.webDav.user, settings.webDav.password)
                 setLoadingInfo('连接成功，开始同步文件...');
                 await webdav.syncBooks(books);
               } catch (error) {
@@ -116,8 +124,10 @@ export default function App() {
                 setNotify({type: 'error', content: `连接失败： ${error.message}`, duration: 4});
               }
             }
-            setLoadingInfo('');
+
+            await saveSettings(s);
             setSettings(s);
+            setLoadingInfo('');
           }}
         />
       )}
