@@ -7,6 +7,7 @@
 import * as React from 'react';
 import {Loading, Notifications} from 'hana-ui';
 
+import bk from '../backend';
 import Reader from './reader/Reader';
 import {IBook} from '../interfaces/protocols';
 import Books from './books/Books';
@@ -63,7 +64,7 @@ export default function App() {
         })
         .then(bks => {
           if (webdav.connected) {
-            return webdav.syncBooks(bks);
+            return webdav.syncBooks(bks, info => setLoadingInfo(info));
           }
 
           return bks;
@@ -92,6 +93,10 @@ export default function App() {
             setCurrent(index);
             setState('Reader');
           }}
+          onSync={async () => {
+            await webdav.syncBooks(books, info => setLoadingInfo(info));
+            setLoadingInfo('');
+          }}
           onAddBooks={async files => {
             if (!webdav.connected) {
               setNotify({type: 'error', content: `未连接到服务器，请现在“设定”中配置。`, duration: 4});
@@ -99,13 +104,21 @@ export default function App() {
             }
 
             setLoadingInfo('准备添加书籍...');
+            const invalid: string[] = [];
             for (const file of files) {
               setLoadingInfo(`${file} 添加中...`);
-              await webdav.addBook(file, books);
-              setLoadingInfo(`${file} 添加结束...`);
+              try {
+                await webdav.addBook(file, books);
+              } catch (error) {
+                invalid.push(error.message);
+              }
+
+              if (invalid.length) {
+                bk.worker.showMessage(invalid.join('\n'), 'warning', '以下书籍添加报错');
+              }
             }
 
-            const bks = await webdav.syncBooks(books);
+            const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
             setBooks(bks);
             setLoadingInfo('');
           }}
@@ -135,7 +148,7 @@ export default function App() {
               try {
                 await webdav.changeRemote(s.webDav.url, s.webDav.user, s.webDav.password)
                 setLoadingInfo('连接成功，开始同步文件...');
-                await webdav.syncBooks(books);
+                await webdav.syncBooks(books, info => setLoadingInfo(info));
               } catch (error) {
                 s.webDav = Object.assign({}, settings.webDav);
                 setNotify({type: 'error', content: `连接失败： ${error.message}`, duration: 4});

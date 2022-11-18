@@ -19,6 +19,7 @@ export interface IBooksProps {
   onUpdateSettings(config: ISystemSettings): void;
   onAddBooks(files: string[]): void;
   onRemoveBook(book: IBook): void;
+  onSync(): void;
 }
 
 export default function Books(props: IBooksProps) {
@@ -28,6 +29,7 @@ export default function Books(props: IBooksProps) {
         settings={props.settings}
         onUpdateSettings={props.onUpdateSettings}
         onAddBooks={props.onAddBooks}
+        onSync={props.onSync}
       />
       <div className={css.list}>
         {props.books.map((book, index) => (
@@ -61,10 +63,14 @@ function Book(props: IBookProps) {
       }}
       onClick={props.onSelect}
     >
-      <div className={css.bookInfo}>
-        <div className={css.bookName}>{props.book.name}</div>
-        <div className={css.bookAuthor}>{props.book.author}</div>
-      </div>
+      {
+        !props.book.cover && (
+          <div className={css.bookInfo}>
+            <div className={css.bookName}>{props.book.name}</div>
+            <div className={css.bookAuthor}>{props.book.author}</div>
+          </div>
+        )
+      }
     </div>
   )
 }

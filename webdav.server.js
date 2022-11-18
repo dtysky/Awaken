@@ -23,6 +23,12 @@ server.beforeRequest((ctx, next) => {
   next();
 });
 
+server.afterRequest((arg, next) => {
+  // Display the method, the URI, the returned status code and the returned message
+  console.log('>>', arg.request.method, arg.requested.uri, '>', arg.response.statusCode, arg.response.statusMessage);
+  next();
+});
+
 server.start((s) => {
   console.log('Server started on port ' + s.address().port + '.');
 });

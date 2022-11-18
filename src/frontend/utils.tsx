@@ -33,7 +33,19 @@ export async function loadBooks() {
     await bk.worker.fs.writeFile('books.json', '[]', 'Books');
   }
 
+  for (const book of books) {
+    await fillBookCover(book); 
+  }
+
   return books;
+}
+
+export async function fillBookCover(book: IBook) {
+  if (await bk.worker.fs.exists(`${book.hash}/cover.png`, 'Books')) {
+    const content = await bk.worker.fs.readFile(`${book.hash}/cover.png`, 'binary', 'Books') as ArrayBuffer;
+    const url = URL.createObjectURL(new Blob([content]));
+    book.cover = url;
+  }
 }
 
 export async function selectFolder(requireRes: boolean): Promise<string> {

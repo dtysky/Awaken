@@ -16,6 +16,7 @@ interface IMenuProps {
   settings: ISystemSettings;
   onUpdateSettings(settings: ISystemSettings): void;
   onAddBooks(files: string[]): void;
+  onSync(): void;
 }
 
 export function Menu(props: IMenuProps) {
@@ -40,6 +41,12 @@ export function Menu(props: IMenuProps) {
           }}
         >
           设定
+        </Button>
+        <Button
+          className={css.menuItem}
+          onClick={props.onSync}
+        >
+          同步
         </Button>
         <Button
           className={css.menuItem}
