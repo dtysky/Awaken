@@ -30,6 +30,7 @@ export interface IBookNote {
   text?: string;
   // default to ''
   annotation?: string;
+  removed?: boolean;
 }
 
 export interface IBookConfig {

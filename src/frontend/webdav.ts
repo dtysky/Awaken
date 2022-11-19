@@ -224,6 +224,7 @@ class WebDAV {
     let remoteIndex: number = 0;
     let pre: IBookNote;
     let less: IBookNote;
+    let preRemoved: IBookNote;
 
     while (localIndex < localNotes.length || remoteIndex < remoteNotes.length) {
       const local = localNotes[localIndex];
@@ -238,7 +239,16 @@ class WebDAV {
         localIndex += 1;
       }
 
+      if (less.removed) {
+        preRemoved = less;
+        continue;
+      }
+
       if (pre?.cfi === less.cfi) {
+        continue;
+      }
+
+      if (preRemoved?.cfi === less.cfi) {
         continue;
       }
 

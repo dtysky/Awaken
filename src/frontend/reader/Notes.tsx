@@ -26,7 +26,7 @@ export function Notes(props: INotesProps) {
     <div className={css.notesContent}>
       <>
       {
-        props.bookmarks.map(item => (
+        props.bookmarks.map(item => !item.removed && (
           <div
             key={item.cfi}
             className={`${css.notesItem} ${css.noteBookmark}`}
@@ -42,7 +42,7 @@ export function Notes(props: INotesProps) {
       </>
       <>
       {
-        props.notes.map((item, index) => (
+        props.notes.map((item, index) => !item.removed && (
           <div
             key={item.cfi}
             className={css.notesItem}

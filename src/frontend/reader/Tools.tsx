@@ -83,6 +83,7 @@ export function Tools(props: IToolsProps) {
             onClick={() => {
               changeNote(props.notes, note, status, ENoteAction.Delete);
               props.rendition.annotations.remove(note.cfi, 'highlight');
+              props.onChangeNotes(props.notes);
             }}
           />
           <IconButton
