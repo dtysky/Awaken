@@ -122,7 +122,13 @@ export default function App() {
             setBooks(bks);
             setLoadingInfo('');
           }}
-          onRemoveBook={file => {}}
+          onRemoveBook={async book => {
+            setLoadingInfo('等待删除书籍...');
+            let bks = await webdav.removeBook(book, books);
+            bks = await webdav.syncBooks(bks, info => setLoadingInfo(info));
+            setBooks(bks);
+            setLoadingInfo('');
+          }}
           onUpdateSettings={async s => {
             let webDavChanged = settings.webDav.url !== s.webDav.url ||
               settings.webDav.user !== s.webDav.user;
@@ -165,7 +171,7 @@ export default function App() {
         <Reader
           book={books[current]}
           onClose={async bookConfig => {
-            setLoadingInfo('与远端同步笔记和进度...');
+            setLoadingInfo('合并与同步笔记和进度到远端...');
             await webdav.syncBook(books[current], bookConfig);
             setState('Books');
             setLoadingInfo('');

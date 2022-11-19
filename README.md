@@ -2,7 +2,9 @@
 
 ## todo
 
-1. 书籍导入功能，导入后为`[hash]`目录，下面是`[书名].epub` + `config.json`，不需要`path`了。
+基于WebDAV，支持添加和删除书籍书籍，书籍内支持进度、书签、标注和笔记，均支持多端同步。
+
+多端，桌面（Windows、macOS、Linux），移动端（安卓、iOS）。
 
 A cross-platform ebooks reader, supports win/android/mac/ios/linux, use wevdav to sync progress, hightlights and annotations.
 

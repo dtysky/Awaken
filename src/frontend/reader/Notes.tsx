@@ -8,12 +8,13 @@ import * as React from 'react';
 import {Modal, TextArea, Postcard, IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
-import {changeNote, ENoteAction, IBookNoteParsed} from './common';
+import {changeNote, ENoteAction} from './common';
+import { IBookNote } from '../../interfaces/protocols';
 
 interface INotesProps {
-  bookmarks: IBookNoteParsed[];
-  notes: IBookNoteParsed[];
-  onJump(note: IBookNoteParsed): void;
+  bookmarks: IBookNote[];
+  notes: IBookNote[];
+  onJump(note: IBookNote): void;
 }
 
 export function Notes(props: INotesProps) {

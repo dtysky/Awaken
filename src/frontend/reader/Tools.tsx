@@ -8,14 +8,15 @@ import * as React from 'react';
 import {IconButton, Modal, TextArea} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
-import {changeNote, checkNoteMark, ENoteAction, IBookNoteParsed, INoteMarkStatus, splitCFI} from './common';
+import {changeNote, checkNoteMark, ENoteAction, INoteMarkStatus, splitCFI} from './common';
+import { IBookNote } from '../../interfaces/protocols';
 
 interface IToolsProps {
-  notes: IBookNoteParsed[];
+  notes: IBookNote[];
   cfi: string;
   rendition: ePub.Rendition;
   content: ePub.Contents;
-  onChangeNotes(notes: IBookNoteParsed[]): void;
+  onChangeNotes(notes: IBookNote[]): void;
 }
 
 let preCFI: string;
@@ -23,7 +24,7 @@ export function Tools(props: IToolsProps) {
   const [show, setShow] = React.useState<boolean>(false);
   const [showModal, setShowModal] = React.useState<boolean>(false);
   const [annotation, setAnnotation] = React.useState<string>('');
-  const [note, setNote] = React.useState<IBookNoteParsed>();
+  const [note, setNote] = React.useState<IBookNote>();
   const [status, setStatus] = React.useState<INoteMarkStatus>();
   const [x, setX] = React.useState<number>();
   const [y, setY] = React.useState<number>();

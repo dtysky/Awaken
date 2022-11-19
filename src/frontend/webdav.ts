@@ -5,17 +5,19 @@
  * @Date   : 2022/11/15 22:54:37
  */
 import {createClient, AuthType, WebDAVClient, FileStat} from 'webdav/web';
-import ePub from 'epubjs';
+import ePub, {EpubCFI} from 'epubjs';
 import * as md5 from 'js-md5';
 
-import {IBook, IBookConfig} from '../interfaces/protocols';
 import bk from '../backend';
-import { fillBookCover } from './utils';
+import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
+import {fillBookCover} from './utils';
 
 export interface IBookContent {
   content: ArrayBuffer;
   config: IBookConfig;
 }
+
+const parser = new EpubCFI() as any;
 
 class WebDAV {
   private _client: WebDAVClient;
@@ -67,22 +69,25 @@ class WebDAV {
       remoteBooks = JSON.parse(tmp);
     }
 
-    const localTable = new Set<string>();
-    const remoteTable = new Set<string>();
+    
+    const localTable: {[hash: string]: IBook} = {};
+    const remoteTable: {[hash: string]: IBook} = {};
 
-    books.forEach(book => localTable.add(book.hash));
-    remoteBooks.forEach(book => remoteTable.add(book.hash));
+    books.forEach(book => localTable[book.hash] = book);
+    remoteBooks.forEach(book => remoteTable[book.hash] = book);
 
     const syncToLocalBooks: IBook[] = [];
     remoteBooks.forEach(book => {
-      if (!localTable.has(book.hash)) {
+      const localBook = localTable[book.hash];
+      if (!localBook || (book.removed && !localBook.removed && !localBook.waitSync)) {
         syncToLocalBooks.push(book);
       }
     });
 
     const syncToRemoteBooks: IBook[] = [];
     books.forEach(book => {
-      if (!remoteTable.has(book.hash)) {
+      const remoteBook = remoteTable[book.hash];
+      if (!remoteBook || (book.removed && !remoteBook.removed) || (remoteBook.removed && book.waitSync)) {
         syncToRemoteBooks.push(book);
       }
     });
@@ -90,13 +95,20 @@ class WebDAV {
     if (syncToLocalBooks.length) {
       onUpdate(`检测到远端新书籍 ${syncToLocalBooks.length} 本，准备同步到本地...`);
       for (const book of syncToLocalBooks) {
+        if (book.removed) {
+          onUpdate(`移除本地书籍 ${book.name}...`);
+          await this.removeBook(localTable[book.hash], books);
+          continue;
+        }
+
         const contents = await this._client.getDirectoryContents(book.hash) as FileStat[];
         if (!(await fs.exists(book.hash, 'Books'))) {
           await fs.createDir(book.hash, 'Books');
         }
         
         for (const stat of contents) {
-          await this._writeWithCheck(book, stat.filename, onUpdate);
+          // 这里只同步目录配置和封面，书籍等到加载时在真正下载！
+          !/\.epub$/.test(stat.filename) && await this._writeWithCheck(book, stat.filename, onUpdate);
         }
   
         await fillBookCover(book);
@@ -104,13 +116,20 @@ class WebDAV {
       }
     }
 
-    const booksStr = JSON.stringify(books);
+    let booksStr = JSON.stringify(books);
     await fs.writeFile('books.json', booksStr, 'Books');
 
     if (syncToRemoteBooks.length) {
       try {
         onUpdate(`检测到本地新书籍 ${syncToRemoteBooks.length} 本，准备同步到远端...`);
         for (const book of syncToRemoteBooks) {
+          if (book.removed) {
+            console.log(`删除远端书籍 ${book.name}...`);
+            onUpdate(`删除远端书籍 ${book.name}...`);
+            await this._client.deleteFile(`${`${book.hash}/${book.name}.epub`}`);
+            continue;
+          }
+
           if (!(await this._client.exists(book.hash))) {
             await this._client.createDirectory(book.hash);
           }
@@ -122,15 +141,20 @@ class WebDAV {
             }
 
             const data = await fs.readFile(fp, 'binary', 'Books');
-            await this._client.putFileContents(fp, data, {overwrite: true, onUploadProgress: ({loaded, total}) => {
+            await this._client.putFileContents(fp, data, {overwrite: false, onUploadProgress: ({loaded, total}) => {
               onUpdate(`同步书籍 ${book.name} 的 ${name} 到远端：${~~(loaded / total * 100)}%`);
             }});
           }
+
+          delete book.waitSync;
         }
     
+        booksStr = JSON.stringify(books);
+        await fs.writeFile('books.json', booksStr, 'Books');
         await this._client.putFileContents('books.json', booksStr, {overwrite: true, onUploadProgress: ({loaded, total}) => {
           onUpdate(`同步目录到远端：${~~(loaded / total * 100)}%`);
         }});
+        await fs.writeFile('books.json', booksStr, 'Books');
       } catch (error) {
         console.error(error)
         bk.worker.showMessage(`同步到远端出错，可手动再次发起同步！`, 'warning');
@@ -138,10 +162,6 @@ class WebDAV {
     }
 
     return books;
-  }
-
-  public async syncBook(book: IBook, config: IBookConfig): Promise<IBookConfig> {
-    return config;
   }
 
   private async _writeWithCheck(book: IBook, filename: string, onUpdate?: (info: string) => void) {
@@ -158,79 +178,147 @@ class WebDAV {
     }});
     return await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
   }
-
-  private async _mergeConfig(local: IBookConfig, remote: IBookConfig) {
-
-  }
   
   async loadBook(book: IBook): Promise<IBookContent> {
-    // 先sync
-    // book = await this.syncBook(book);
+    const config = await this.syncBook(book);
 
     return {
       content: await bk.worker.fs.readFile(`${book.hash}/${book.name}.epub`, 'binary', 'Books') as ArrayBuffer,
-      config: {
-        progress: 0,
-        bookmarks: [],
-        notes: []
-      }
+      config
     }
+  }
+
+  public async syncBook(book: IBook, config?: IBookConfig): Promise<IBookConfig> {
+    if (!config) {
+      config = JSON.parse(await bk.worker.fs.readFile(`${book.hash}/config.json`, 'utf8', 'Books') as string);
+    }
+
+    await this._writeWithCheck(book, `${book.name}.epub`);
+    const remote = JSON.parse(await this._client.getFileContents(`${book.hash}/config.json`, {format: 'text'}) as string);
+
+    config = this._mergeConfig(config, remote);
+    
+    const configStr = JSON.stringify(config);
+    await bk.worker.fs.writeFile(`${book.hash}/config.json`, configStr, 'Books');
+    await this._client.putFileContents(`${book.hash}/config.json`, configStr, {overwrite: true});
+
+    return config;
+  }
+
+  private _mergeConfig(local: IBookConfig, remote: IBookConfig): IBookConfig {
+    const localTS = local.ts || Date.now();
+    const remoteTS = remote.ts || Date.now();
+    local.lastProgress = local.lastProgress || local.progress;
+    remote.lastProgress = remote.lastProgress || remote.progress;
+    local.ts = Math.max(localTS, remoteTS);
+    local.lastProgress = localTS > remoteTS ? local.lastProgress : remote.lastProgress;
+    local.notes = this._mergeNotes(local.notes, remote.notes);
+    local.bookmarks = this._mergeNotes(local.bookmarks, remote.bookmarks);
+
+    return local;
+  }
+
+  private _mergeNotes(localNotes: IBookNote[], remoteNotes: IBookNote[]): IBookNote[] {
+    const res: IBookNote[] = [];
+    let localIndex: number = 0;
+    let remoteIndex: number = 0;
+    let pre: IBookNote;
+    let less: IBookNote;
+
+    while (localIndex < localNotes.length || remoteIndex < remoteNotes.length) {
+      const local = localNotes[localIndex];
+      const remote = remoteNotes[remoteIndex];
+
+      const comp: number = !local ? 1 : !remote ? -1 : parser.compare(local.cfi, remote.cfi);
+      if (comp === 1) {
+        less = remote;
+        remoteIndex += 1;
+      } else {
+        less = local;
+        localIndex += 1;
+      }
+
+      if (pre?.cfi === less.cfi) {
+        continue;
+      }
+
+      res.push(less);
+      pre = less;
+    }
+
+    return res;
   }
 
   public async addBook(fp: string, books: IBook[]): Promise<IBook[]> {
     const {fs} = bk.worker;
-    const book = ePub();
+    const epub = ePub();
 
     try {
       const content = await fs.readFile(fp, 'binary', 'None') as ArrayBuffer;
       try {
-        await book.open(content);
+        await epub.open(content);
       } catch (error) {
         throw new Error(`书籍无法解析：${fp}`);
       }
 
       const hash = md5.hex(content);
-
-      if (books.filter(b => b.hash === hash).length) {
+      
+      const book = books.filter(b => b.hash === hash)[0];
+      if (book && !book?.removed) {
         throw new Error(`书籍已存在：${fp}`);
       }
 
-      const coverUrl = await book.coverUrl();
+      const coverUrl = await epub.coverUrl();
       let cover: ArrayBuffer;
       if (coverUrl) {
         cover = await (await fetch(coverUrl)).arrayBuffer();
       }
-      const metadata = await book.loaded.metadata;
+      const metadata = await epub.loaded.metadata;
       const name = metadata.title;
       const author = metadata.creator;
 
       if (!(await fs.exists(hash, 'Books'))) {
-        fs.createDir(hash, 'Books');
-        fs.writeFile(`${hash}/${name}.epub`, content, 'Books');
-        fs.writeFile(`${hash}/config.json`, '{"progress": 0,"notes": [],"bookmarks":[]}', 'Books');
-        cover && fs.writeFile(`${hash}/cover.png`, cover, 'Books');
+        await fs.createDir(hash, 'Books');
+        await fs.writeFile(`${hash}/config.json`, '{"progress": 0,"notes": [],"bookmarks":[]}', 'Books');
+        await fs.writeFile(`${hash}/${name}.epub`, content, 'Books');
+        cover && await fs.writeFile(`${hash}/cover.png`, cover, 'Books');
+        books.splice(0, 0, {
+          hash,
+          type: 'EPUB',
+          name,
+          author,
+          cover: coverUrl,
+          waitSync: true
+        });
+      } else if (book.removed) {
+        await fs.writeFile(`${hash}/${name}.epub`, content, 'Books');
+        cover && await fs.writeFile(`${hash}/cover.png`, cover, 'Books');
+        delete book.removed;
+        book.waitSync = true;
       }
-
-      const b: IBook = {
-        hash,
-        type: 'EPUB',
-        name,
-        author,
-        cover: coverUrl
-      };
-
-      books.splice(0, 0, b);
     } catch (error) {
       throw error;
     } finally {
-      book.destroy();
+      epub.destroy();
     }
 
     return books;
   }
 
   public async removeBook(book: IBook, books: IBook[]): Promise<IBook[]> {
-    // remove只是做标记，并不会真正remove
+    const {fs} = bk.worker;
+
+    for (const name of [`${book.name}.epub`, 'cover.png']) {
+      const fp = `${book.hash}/${name}`;
+      if (!(await fs.exists(fp, 'Books'))) {
+        continue;
+      }
+
+      await fs.removeFile(fp, 'Books');
+    }
+
+    book.removed = true;
+
     return books;
   }
 }

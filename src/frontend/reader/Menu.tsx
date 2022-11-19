@@ -12,9 +12,10 @@ import {INoteMarkStatus} from './common';
 
 interface IMenuProps {
   bookmarkStatus?: INoteMarkStatus;
+  onReturn(): void;
+  onSync(): void;
   onIndexes(): void;
   onNotes(): void;
-  onReturn(): void;
   onBookmark(): void;
 }
 
@@ -27,6 +28,12 @@ export function Menu(props: IMenuProps) {
         onClick={props.onReturn}
       >
         返回
+      </Button>
+      <Button
+        className={css.menuItem}
+        onClick={props.onSync}
+      >
+        同步
       </Button>
       <Button
         className={css.menuItem}

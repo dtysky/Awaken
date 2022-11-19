@@ -5,12 +5,14 @@
  * @Date   : 2022/9/16 23:12:26
  */
 import * as React from 'react';
-import {IBook} from '../../interfaces/protocols';
 import ColorHash from 'color-hash'
+import {IconButton, Modal} from 'hana-ui';
 
-import css from '../styles/books.module.scss';
+import {IBook} from '../../interfaces/protocols';
 import {Menu} from './Menu';
 import {ISystemSettings} from '../../interfaces';
+
+import css from '../styles/books.module.scss';
 
 export interface IBooksProps {
   settings: ISystemSettings;
@@ -23,6 +25,9 @@ export interface IBooksProps {
 }
 
 export default function Books(props: IBooksProps) {
+  const [showDelete, setShowDelete] = React.useState<boolean>(false);
+  const [bookDelete, setBookDelete] = React.useState<IBook>();
+
   return (
     <div className={css.books}>
       <Menu
@@ -32,16 +37,36 @@ export default function Books(props: IBooksProps) {
         onSync={props.onSync}
       />
       <div className={css.list}>
-        {props.books.map((book, index) => (
+        {props.books.map((book, index) => !book.removed && (
           <Book
             key={book.hash}
             book={book}
             onSelect={() => {
               props.onSelect(index)
             }}
+            onDelete={() => {
+              setBookDelete(book);
+              setShowDelete(true);
+            }}
           />
         ))}
       </div>
+
+      <Modal
+        show={showDelete}
+        title='确认删除书籍？'
+        titleStyle={{color: 'red'}}
+        contentStyle={{color: 'red'}}
+        confirm={() => {
+          setShowDelete(false);
+          props.onRemoveBook(bookDelete);
+        }}
+        cancel={() => setShowDelete(false)}
+      >
+        <p>书籍《{bookDelete?.name}》将会被删除。</p>
+        <p>包括服务端副本，并会同步给所有终端。</p>
+        <p>但笔记将会保留，再次添加相同书籍可恢复。</p>
+      </Modal>
     </div>
   );
 }
@@ -49,6 +74,7 @@ export default function Books(props: IBooksProps) {
 interface IBookProps {
   book: IBook;
   onSelect(): void;
+  onDelete(): void;
 }
 
 const colorHash = new ColorHash();
@@ -61,16 +87,22 @@ function Book(props: IBookProps) {
       } : {
         backgroundColor: colorHash.hex(props.book.hash)
       }}
-      onClick={props.onSelect}
     >
-      {
-        !props.book.cover && (
-          <div className={css.bookInfo}>
-            <div className={css.bookName}>{props.book.name}</div>
-            <div className={css.bookAuthor}>{props.book.author}</div>
-          </div>
-        )
-      }
+      <IconButton
+        type='close'
+        size='large'
+        onClick={props.onDelete}
+      />
+      <div onClick={props.onSelect}>
+        {
+          !props.book.cover && (
+            <div className={css.bookInfo}>
+              <div className={css.bookName}>{props.book.name}</div>
+              <div className={css.bookAuthor}>{props.book.author}</div>
+            </div>
+          )
+        }
+      </div>
     </div>
   )
 }

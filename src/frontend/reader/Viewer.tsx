@@ -8,8 +8,9 @@ import * as React from 'react';
 import ePub from 'epubjs';
 
 import css from '../styles/reader.module.scss';
-import {mergeCFI, IBookIndex, IBookNoteParsed, ENoteAction, splitCFI} from './common';
-import { Tools } from './Tools';
+import {mergeCFI, IBookIndex} from './common';
+import {Tools} from './Tools';
+import { IBookNote } from '../../interfaces/protocols';
 
 export enum EJumpAction {
   CFI,
@@ -21,15 +22,15 @@ export enum EJumpAction {
 
 export interface IViewerProps {
   content: ArrayBuffer;
-  bookmarks: IBookNoteParsed[];
-  notes: IBookNoteParsed[];
+  bookmarks: IBookNote[];
+  notes: IBookNote[];
   onLoad(
     indexes: IBookIndex[], start: number, max: number,
     jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
   ): void;
-  onBookmarkInfo(info: IBookNoteParsed): void;
+  onBookmarkInfo(info: IBookNote): void;
   onProgress(progress: number): void;
-  onChangeNotes(notes: IBookNoteParsed[]): void;
+  onChangeNotes(notes: IBookNote[]): void;
 }
 
 type TState = 'Init' | 'Loading' | 'Ready';

@@ -11,6 +11,8 @@ export interface IBook {
   type: TBookType;
   name: string;
   author: string;
+  waitSync?: boolean;
+  removed?: boolean;
   // 以下是在打开是自动拼接
   // 检查下`hash`目录下是否有cover
   cover?: string;
@@ -19,6 +21,10 @@ export interface IBook {
 // highlights and annotations
 export interface IBookNote {
   cfi: string;
+  // cfi start
+  start: string;
+  // cfi start
+  end: string;
   page: number;
   // for note
   text?: string;
@@ -27,6 +33,10 @@ export interface IBookNote {
 }
 
 export interface IBookConfig {
+  ts: number;
+  // remote
+  lastProgress: number;
+  // always local
   progress: number;
   bookmarks: IBookNote[];
   notes: IBookNote[];
