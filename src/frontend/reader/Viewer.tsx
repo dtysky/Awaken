@@ -22,10 +22,11 @@ export enum EJumpAction {
 
 export interface IViewerProps {
   content: ArrayBuffer;
+  pages?: string;
   bookmarks: IBookNote[];
   notes: IBookNote[];
   onLoad(
-    indexes: IBookIndex[], start: number, max: number,
+    indexes: IBookIndex[], pages: string[],
     jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
   ): void;
   onBookmarkInfo(info: IBookNote): void;
@@ -73,7 +74,11 @@ export function Viewer(props: IViewerProps) {
       } as any);
 
       book.loaded.navigation.then(nav => {
-        book.locations.generate(1000).then(cfis => {
+        const promise: Promise<string[]> = props.pages ?
+          new Promise(resolve => resolve(book.locations.load(props.pages))) :
+          book.locations.generate(1000);
+
+        promise.then(pages => {
           idToHref = {};
           const indexes: IBookIndex[] = [];
           nav.toc.forEach(t => {
@@ -119,7 +124,7 @@ export function Viewer(props: IViewerProps) {
             }
           };
 
-          props.onLoad(indexes, 1, cfis.length, jump);
+          props.onLoad(indexes, pages, jump);
 
           rendition.display(rendition.book.locations.cfiFromLocation(0));
           setState('Ready');

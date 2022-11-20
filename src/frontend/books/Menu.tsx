@@ -24,6 +24,7 @@ export function Menu(props: IMenuProps) {
   const [showConfig, setShowConfig] = React.useState<boolean>(false);
   const [showConfirm, setShowConfirm] = React.useState<boolean>(false);
   const [confirmText, setConfirmText] = React.useState<string[]>([]);
+  const [showAbout, setShowAbout] = React.useState<boolean>(false);
   const forceUpdate: () => void = React.useState({})[1].bind(null, {})
 
   return (
@@ -57,6 +58,12 @@ export function Menu(props: IMenuProps) {
           }}
         >
           添加
+        </Button>
+        <Button
+          className={css.menuItem}
+          onClick={() => setShowAbout(true)}
+        >
+          关于
         </Button>
       </ButtonGroup>
 
@@ -166,6 +173,31 @@ export function Menu(props: IMenuProps) {
             <p key={t}>{t}</p>
           ))
         }
+      </Modal>
+
+      <Modal
+        show={showAbout}
+        confirm={() => setShowAbout(false)}
+        showClose={false}
+      >
+        <div className={css.about}>
+          <h1>Awaken</h1>
+          <div className={css.aboutSlogan}>
+            <p>作为演员的时候，我们不可忘却愤怒。</p>
+            <p>作为观众的时候，我们不可忘却叹息。</p>
+          </div>
+          <p className={css.aboutLinks}>
+            <a href="https://github.com/dtysky/Awaken" target='_blank'>项目主页</a>
+            <a href="https://github.com/dtysky/Awaken/releases" target='_blank'>获取新版本</a>
+          </p>
+
+          <div className={css.aboutCopyright}>
+            <p>Copyright © 2022</p>
+            <p>戴天宇, Tianyu Dai (dtysky@outlook.com)</p>
+            <p>本软件为开源软件，遵循协议</p>
+            <a href="https://www.gnu.org/licenses/lgpl-3.0.html" target='_blank'>GNU Lesser General Public License (LGPL)</a>
+          </div>
+        </div>
       </Modal>
     </>
   )

@@ -15,7 +15,7 @@
   width: 90%;
   height: 3rem;
   left: 5%;
-  top: 2%;
+  top: 1rem;
   display: flex;
   justify-content: start;
   align-items: center;
@@ -30,7 +30,7 @@
   position: absolute;
   width: 90%;
   left: 5%;
-  top: 10%;
+  top: 4rem;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -77,4 +77,28 @@
 .bookAuthor {
   font-size: 1rem;
   margin-top: 0.2rem;
+}
+
+.about {
+  padding: 2rem 4rem;
+  text-align: center;
+}
+
+.aboutSlogan {
+  margin-top: 2rem;
+  line-height: 1.4rem;
+}
+
+.aboutLinks {
+  margin-top: 1rem;
+
+  >a {
+    margin: 0.6rem;
+    text-decoration: none;
+  }
+}
+
+.aboutCopyright {
+  margin-top: 1rem;
+  line-height: 1.4rem;
 }

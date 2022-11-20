@@ -29,6 +29,7 @@ let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex)
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
   const [content, setContent] = React.useState<ArrayBuffer>();
+  const [pages, setPages] = React.useState<string>();
   const [bookmarks, setBookmarks] = React.useState<IBookNote[]>([]);
   const [notes, setNotes] = React.useState<IBookNote[]>([]);
   const [indexes, setIndexes] = React.useState<IBookIndex[]>();
@@ -46,15 +47,15 @@ export default function Reader(props: IReaderProps) {
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');
-      setLoadingInfo('书籍《{props.book.name}》加载中...若首次从远端同步可能需要较长时间。')
+      setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`)
       webdav.loadBook(props.book).then(book => {
         setContent(book.content);
+        setPages(book.pages);
         setBookmarks(book.config.bookmarks);
         setNotes(book.config.notes);
         setProgress(book.config.progress);
         setLastProgress(book.config.lastProgress);
         setTs(book.config.ts);
-        setLoadingInfo('');
         setState('Ready');
       }).catch(error => {
         console.error(error);
@@ -131,13 +132,18 @@ export default function Reader(props: IReaderProps) {
               </div>
               <Viewer
                 content={content}
+                pages={pages}
                 bookmarks={bookmarks}
                 notes={notes}
-                onLoad={(indexes, start, max, jumpTo) => {
+                onLoad={async (indexes, pgs, jumpTo) => {
+                  if (!pages) {
+                    await webdav.savePages(props.book, pgs);
+                  }
                   setIndexes(indexes);
                   setCurrentIndex(indexes[0]);
-                  setRange({start, max});
+                  setRange({start: 1, max: pgs.length});
                   jump = jumpTo;
+                  setLoadingInfo('');
                 }}
                 onProgress={p => {
                   setProgress(p);

@@ -15,6 +15,8 @@ import {fillBookCover} from './utils';
 export interface IBookContent {
   content: ArrayBuffer;
   config: IBookConfig;
+  // generate once then save to local
+  pages?: string;
 }
 
 const parser = new EpubCFI() as any;
@@ -52,7 +54,7 @@ class WebDAV {
       return;
     }
 
-    // copy from origin to new dest
+    //@todo: copy from origin to new dest
   }
 
   public async syncBooks(books: IBook[], onUpdate: (info: string) => void): Promise<IBook[]> {
@@ -68,7 +70,6 @@ class WebDAV {
       const tmp = await this._client.getFileContents('books.json', {format: 'text'}) as string;
       remoteBooks = JSON.parse(tmp);
     }
-
     
     const localTable: {[hash: string]: IBook} = {};
     const remoteTable: {[hash: string]: IBook} = {};
@@ -180,12 +181,20 @@ class WebDAV {
   }
   
   async loadBook(book: IBook): Promise<IBookContent> {
+    const {fs} = bk.worker;
+
     const config = await this.syncBook(book);
+    const pages = await fs.exists(`${book.hash}/pages.json`, 'Books') &&
+      await fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string;
 
     return {
-      content: await bk.worker.fs.readFile(`${book.hash}/${book.name}.epub`, 'binary', 'Books') as ArrayBuffer,
-      config
+      content: await fs.readFile(`${book.hash}/${book.name}.epub`, 'binary', 'Books') as ArrayBuffer,
+      config, pages
     }
+  }
+
+  async savePages(book: IBook, pages: string[]) {
+    return await bk.worker.fs.writeFile(`${book.hash}/pages.json`, JSON.stringify(pages), 'Books');
   }
 
   public async syncBook(book: IBook, config?: IBookConfig): Promise<IBookConfig> {
