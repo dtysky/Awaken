@@ -56,10 +56,9 @@ export default function App() {
           }
 
           return undefined;
-        }).then(() => {
-          webdav.changeLocal(s.folder);
+        }).then(() => webdav.changeLocal(s.folder))
+        .then(() => {
           setSettings(s);
-
           return loadBooks();
         })
         .then(bks => {
@@ -142,10 +141,11 @@ export default function App() {
             if (folderChanged) {
               setLoadingInfo('修改书籍目录，拷贝文件...');
               try {
-                await webdav.changeLocal(settings.folder);
+                await webdav.changeLocal(s.folder, info => setLoadingInfo(info));
               } catch (error) {
                 s.folder = settings.folder;
-                setNotify({type: 'error', content: `修改本地目录失败： ${error.message}`, duration: 4});
+                console.error(error, s)
+                setNotify({type: 'error', content: `修改本地目录失败： ${error.message || error}`, duration: 4});
               }
             }
 
@@ -157,7 +157,7 @@ export default function App() {
                 await webdav.syncBooks(books, info => setLoadingInfo(info));
               } catch (error) {
                 s.webDav = Object.assign({}, settings.webDav);
-                setNotify({type: 'error', content: `连接失败： ${error.message}`, duration: 4});
+                setNotify({type: 'error', content: `连接失败： ${error.message || error}`, duration: 4});
               }
             }
 

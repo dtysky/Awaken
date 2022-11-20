@@ -165,6 +165,7 @@ export function Menu(props: IMenuProps) {
           setShowConfirm(false);
         }}
         cancel={() => setShowConfirm(false)}
+        contentStyle={{color: 'red', textAlign: 'center'}}
       >
         <p>请确认重要信息更新：</p>
         <br />

@@ -44,17 +44,43 @@ class WebDAV {
       this._hasBookIndexes = await this._client.exists('books.json');
     } catch (error) {
       this._client = undefined;
-      throw error;
+      bk.worker.showMessage('无法连接已保存的服务器，请检查', 'warning');
     }
   }
 
-  public async changeLocal(folder: string) {
+  public async changeLocal(folder: string, onUpdate?: (info: string) => void) {
     if (!this._folder) {
       this._folder = folder;
       return;
     }
 
-    //@todo: copy from origin to new dest
+    if (this._folder === folder) {
+      return;
+    }
+
+    onUpdate('开始迁移本地书籍...');
+    const {fs} = bk.worker;
+    const tree = await fs.readDir('', 'Books');
+    
+    for (const sub of tree) {
+      if (!sub.isDir) {
+        fs.writeFile(`${folder}/${sub.path}`, await fs.readFile(sub.path, 'binary', 'Books'), 'None');
+        continue;
+      }
+
+      await fs.createDir(`${folder}/${sub.path}`, 'None');
+      const subTree = await fs.readDir(sub.path, 'Books');
+
+      for (const {isDir, path} of subTree) {
+        // 最多两级
+        if (isDir) {
+          continue;
+        }
+
+        /\.epub$/.test(path) && onUpdate(`迁移书籍《${path}》...`);
+        fs.writeFile(`${folder}/${sub.path}/${path}`, await fs.readFile(`${sub.path}/${path}`, 'binary', 'Books'), 'None');
+      }
+    }
   }
 
   public async syncBooks(books: IBook[], onUpdate: (info: string) => void): Promise<IBook[]> {

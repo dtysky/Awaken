@@ -12,14 +12,13 @@ export interface ILogger {
   error(...args: any): void;
 }
 
-export type TBaseDir = 'Books' | 'Settings' | 'Tmp' | 'Log' | 'None';
+export type TBaseDir = 'Books' | 'Settings' | 'Log' | 'None';
 export type TToastType = 'info' | 'warning' | 'error';
 
 export interface IFileSystem {
   readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir): Promise<string | ArrayBuffer>;
   writeFile(filePath: string, content: string | ArrayBuffer, baseDir: TBaseDir): Promise<void>;
   removeFile(filePath: string, baseDir: TBaseDir): Promise<void>;
-  copyFile(src: string, dst: string, baseDir: TBaseDir): Promise<void>;
   readDir(dirPath: string, baseDir: TBaseDir): Promise<{path: string, isDir: boolean}[]>;
   createDir(dirPath: string, baseDir: TBaseDir): Promise<void>;
   removeDir(dirPath: string, baseDir: TBaseDir): Promise<void>;

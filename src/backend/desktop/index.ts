@@ -10,18 +10,16 @@ import {ISystemSettings} from '../../interfaces';
 
 let BOOKS_FOLDER: string;
 
-function processPath(fp: string, base: TBaseDir): {base: number, fp: string} {
+function processPath(fp: string, base: TBaseDir): {base: number, fp: string, dir: () => Promise<string>} {
   switch (base) {
     case 'Settings':
-      return {base: fs.BaseDirectory.App, fp};
+      return {base: fs.BaseDirectory.App, fp, dir: path.appDir};
     case 'Log':
-      return {base: fs.BaseDirectory.Log, fp};
-    case 'Tmp':
-      return {base: fs.BaseDirectory.Cache, fp: `com.dtysky.Awaken/${fp}`};
+      return {base: fs.BaseDirectory.Log, fp, dir: path.logDir};
     case 'Books':
-      return {base: undefined, fp: `${BOOKS_FOLDER}/${fp}`};
+      return {base: undefined, fp: `${BOOKS_FOLDER}/${fp}`, dir: () => new Promise(r => r(`${BOOKS_FOLDER}/`))};
     default:
-      return {base: undefined, fp};
+      return {base: undefined, fp, dir: () => new Promise(r => r(''))};
   }
 }
 
@@ -125,22 +123,17 @@ export const worker: IWorker = {
       await fs.removeDir(fp, {dir: base});
     },
     async readDir(dirPath: string, baseDir: TBaseDir) {
-      const {fp, base} = processPath(dirPath, baseDir);
+      const {fp, base, dir} = processPath(dirPath, baseDir);
 
-      const list = await fs.readDir(fp, base && {dir: base});
+      const realBase = await dir();
+      const list = await fs.readDir(fp, {dir: base, recursive: true});
 
       return list.map(entity => {
         return {
-          path: entity.path,
+          path: entity.path.replace(realBase, '').replace(dirPath, ''),
           isDir: !!entity.children?.length
         };
       });
-    },
-    async copyFile(src: string, dst: string, baseDir: TBaseDir) {
-      const s = processPath(src, baseDir);
-      const d = processPath(dst, baseDir);
-
-      await fs.copyFile(d.fp, d.fp, {dir: s.base});
     },
     async exists(filePath: string, baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);
