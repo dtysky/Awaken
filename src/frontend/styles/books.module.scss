@@ -93,6 +93,7 @@
   margin-top: 1rem;
 
   >a {
+    color: #6c9;
     margin: 0.6rem;
     text-decoration: none;
   }
@@ -101,4 +102,8 @@
 .aboutCopyright {
   margin-top: 1rem;
   line-height: 1.4rem;
+
+  >a {
+    color: #6c9;
+  }
 }

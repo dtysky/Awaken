@@ -11,14 +11,20 @@ import {worker as dWorker} from '../backend/desktop';
 // const platform = window['AWAKEN_PLATFORM'];
 const platform: string = 'DESKTOP';
 
-const exp: {worker: IWorker} = {} as any;
+const exp: {
+  worker: IWorker,
+  supportChangeFolder: boolean
+} = {} as any;
 
 if (platform === 'DESKTOP') {
   exp.worker = dWorker;
+  exp.supportChangeFolder = true;
 } else if (platform === 'IOS') {
   exp.worker = {} as any;
+  exp.supportChangeFolder = false;
 } else if (platform === 'ANDROID') {
   exp.worker = {} as any;
+  exp.supportChangeFolder = false;
 } else {
   throw new Error(`Unknown Platform ${platform} !`);
 }

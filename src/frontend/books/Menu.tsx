@@ -7,10 +7,11 @@
 import * as React from 'react';
 import {ButtonGroup, Button, Modal, Form, FormItem, Text, FormGroup} from 'hana-ui';
 
-import css from '../styles/books.module.scss';
+import bk from '../../backend';
 import {ISystemSettings} from '../../interfaces';
 import {IBook} from '../../interfaces/protocols';
 import {selectBook, selectFolder} from '../utils';
+import css from '../styles/books.module.scss';
 
 interface IMenuProps {
   settings: ISystemSettings;
@@ -68,7 +69,6 @@ export function Menu(props: IMenuProps) {
       </ButtonGroup>
 
       <Modal
-        // contentStyle={{height: 200}}
         title={'设定'}
         show={showConfig}
         confirm={() => {
@@ -99,26 +99,30 @@ export function Menu(props: IMenuProps) {
         {
           settings && (
             <Form labelPosition='top'>
-              <FormGroup label="存储目录">
-                <FormItem status='normal'>
-                  <Text value={settings.folder} disabled />
-                </FormItem>
-    
-                <FormItem>
-                  <Button
-                    onClick={() => {
-                      selectFolder(false).then(folder => {
-                        if (folder) {
-                          settings.folder = folder;
-                          forceUpdate();
-                        }
-                      })
-                    }}
-                  >
-                    选择
-                  </Button>
-                </FormItem>
-              </FormGroup>
+              {
+                bk.supportChangeFolder && (
+                  <FormGroup label="存储目录">
+                    <FormItem status='normal'>
+                      <Text value={settings.folder} disabled />
+                    </FormItem>
+        
+                    <FormItem>
+                      <Button
+                        onClick={() => {
+                          selectFolder(false).then(folder => {
+                            if (folder) {
+                              settings.folder = folder;
+                              forceUpdate();
+                            }
+                          })
+                        }}
+                      >
+                        选择
+                      </Button>
+                    </FormItem>
+                  </FormGroup>
+                )
+              }
     
               <FormGroup label="WebDAV" elementStyle={{flexFlow: 'column'}}>
                 <FormItem label="地址" status='normal'>
