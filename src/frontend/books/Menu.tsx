@@ -53,7 +53,7 @@ export function Menu(props: IMenuProps) {
           className={css.menuItem}
           onClick={() => {
             selectBook().then(files => {
-              props.onAddBooks(files)
+              files.length && props.onAddBooks(files)
             })
           }}
         >
@@ -159,16 +159,16 @@ export function Menu(props: IMenuProps) {
 
       <Modal
         show={showConfirm}
+        title='请确认重要信息更新'
         confirm={() => {
           props.onUpdateSettings(settings);
           setShowConfig(false);
           setShowConfirm(false);
         }}
         cancel={() => setShowConfirm(false)}
-        contentStyle={{color: 'red', textAlign: 'center'}}
+        titleStyle={{color: 'red'}}
+        contentStyle={{color: 'red'}}
       >
-        <p>请确认重要信息更新：</p>
-        <br />
         {
           confirmText.map(t => (
             <p key={t}>{t}</p>
