@@ -6,27 +6,24 @@
  */
 import {IWorker} from '../interfaces/IWorker';
 import {worker as dWorker} from '../backend/desktop';
+import {worker as nWorker} from '../backend/native';
 
 // inject runtime
-// const platform = window['AWAKEN_PLATFORM'];
-const platform: string = 'DESKTOP';
+const isNative = !!window['Awaken'];
+
+console.log(isNative)
 
 const exp: {
   worker: IWorker,
   supportChangeFolder: boolean
 } = {} as any;
 
-if (platform === 'DESKTOP') {
-  exp.worker = dWorker;
-  exp.supportChangeFolder = true;
-} else if (platform === 'IOS') {
-  exp.worker = {} as any;
-  exp.supportChangeFolder = false;
-} else if (platform === 'ANDROID') {
-  exp.worker = {} as any;
+if (isNative) {
+  exp.worker = nWorker;
   exp.supportChangeFolder = false;
 } else {
-  throw new Error(`Unknown Platform ${platform} !`);
+  exp.worker = dWorker;
+  exp.supportChangeFolder = true;
 }
 
 export default exp;

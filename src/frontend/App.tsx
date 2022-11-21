@@ -37,6 +37,8 @@ export default function App() {
     duration: number;
   }>();
 
+  return null;
+
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');

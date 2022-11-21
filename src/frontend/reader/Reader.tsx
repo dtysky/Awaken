@@ -44,6 +44,8 @@ export default function Reader(props: IReaderProps) {
   const [showNotes, setShowNotes] = React.useState<boolean>(false);
   const [loadingInfo, setLoadingInfo] = React.useState<string>('');
 
+  const saveConfig = () => webdav.saveConfig({ts, lastProgress: progress, progress, notes, bookmarks});
+
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');
@@ -57,16 +59,17 @@ export default function Reader(props: IReaderProps) {
         setLastProgress(book.config.lastProgress);
         setTs(book.config.ts);
         setState('Ready');
+        window.addEventListener('', saveConfig);
       }).catch(error => {
         console.error(error);
-      })
+      });
 
       return;
     }
   });
 
   return (
-    <div className={css.reader}>
+    <div className={css.reader} onBlur={saveConfig}>
       {
         state === 'Ready' && (
           <>
@@ -92,6 +95,7 @@ export default function Reader(props: IReaderProps) {
                 }}
                 onBookmark={() => {
                   setBookmarkStatus(changeNote(bookmarks, bookmarkInfo, bookmarkStatus));
+                  saveConfig();
                 }}
               />
             </div>
@@ -146,6 +150,7 @@ export default function Reader(props: IReaderProps) {
                   setLoadingInfo('');
                 }}
                 onProgress={p => {
+                  setTs(Date.now());
                   setProgress(p);
                   setLastProgress(p);
                 }}
@@ -155,7 +160,10 @@ export default function Reader(props: IReaderProps) {
                     setBookmarkStatus(checkNoteMark(bookmarks, info.start, info.end));
                   }
                 }}
-                onChangeNotes={setNotes}
+                onChangeNotes={newNotes => {
+                  setNotes(newNotes);
+                  saveConfig();
+                }}
               />
               {
                 range && (
@@ -166,6 +174,7 @@ export default function Reader(props: IReaderProps) {
                     onPre={() => jump(EJumpAction.Pre)}
                     onNext={() => jump(EJumpAction.Next)}
                     onJump={p => {
+                      setTs(Date.now());
                       setProgress(p);
                       setLastProgress(p);
                       jump(EJumpAction.Page, p)

@@ -294,6 +294,10 @@ class WebDAV {
     return res;
   }
 
+  public async saveConfig(config: IBookConfig) {
+
+  }
+
   public async addBook(fp: string, books: IBook[]): Promise<IBook[]> {
     const {fs} = bk.worker;
     const epub = ePub();
