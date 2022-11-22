@@ -1,8 +1,12 @@
 package com.dtysky.Awaken
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
@@ -119,15 +123,16 @@ class MainActivity : AppCompatActivity() {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         window.setStatusBarColor(ContextCompat.getColor(this, R.color.bar))
-//        val decorView = window.decorView
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//            val windowInsetsController: WindowInsetsController = decorView.getWindowInsetsController()
-//                ?: return
-//            windowInsetsController.systemBarsBehavior =
-//                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-//            windowInsetsController.hide(WindowInsets.Type.systemBars())
-//        } else {
-//            decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
-//        }
+
+        val decorView = window.decorView
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowInsetsController = decorView.getWindowInsetsController()
+                ?: return
+            windowInsetsController.systemBarsBehavior =
+                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            windowInsetsController.hide(WindowInsets.Type.systemBars())
+        } else {
+            decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+        }
     }
 }

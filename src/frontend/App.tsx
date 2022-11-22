@@ -98,7 +98,8 @@ export default function App() {
               await webdav.changeRemote(settings.webDav);
             }
 
-            await webdav.syncBooks(books, info => setLoadingInfo(info));
+            const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+            setBooks(bks);
             setLoadingInfo('');
           }}
           onAddBooks={async files => {
@@ -114,6 +115,7 @@ export default function App() {
               try {
                 await webdav.addBook(file, books);
               } catch (error) {
+                console.error(error)
                 invalid.push(error.message);
               }
 
@@ -159,7 +161,8 @@ export default function App() {
               try {
                 await webdav.changeRemote(s.webDav);
                 setLoadingInfo('连接成功，开始同步文件...');
-                await webdav.syncBooks(books, info => setLoadingInfo(info));
+                const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+                setBooks(bks);
               } catch (error) {
                 s.webDav = Object.assign({}, settings.webDav);
                 setNotify({type: 'error', content: `连接失败： ${error.message || error}`, duration: 4});
@@ -185,7 +188,12 @@ export default function App() {
         />
       )}
 
-      {loadingInfo && <Loading mode='queue' content={loadingInfo} />}
+      {loadingInfo && (
+        <Loading
+          mode='queue'
+          content={loadingInfo}
+        />
+      )}
 
       <Notifications notification={notify} />
 

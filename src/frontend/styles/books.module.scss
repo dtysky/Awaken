@@ -23,7 +23,15 @@
 }
 
 .menuItem {
-  margin: 0 0.5rem;
+  margin: 0 0.3rem;
+  // color: #4c9;
+  color: #444;
+  font-size: 1rem;
+  padding: 1rem 0.6rem;
+
+  >i {
+    font-size: 1rem;
+  }
 }
 
 .list {
@@ -80,7 +88,7 @@
 }
 
 .about {
-  padding: 2rem 4rem;
+  padding: 2rem 2rem;
   text-align: center;
 }
 

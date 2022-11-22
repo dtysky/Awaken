@@ -26,6 +26,7 @@ class WebDAV {
   private _client: WebDAVClient;
   private _folder: string;
   private _hasBookIndexes: boolean = false;
+  private _connectWarnShowed: boolean = false;
 
   get connected() {
     return !!this._client;
@@ -107,7 +108,10 @@ class WebDAV {
     const syncToLocalBooks: IBook[] = [];
     remoteBooks.forEach(book => {
       const localBook = localTable[book.hash];
-      if (!localBook || (book.removed && !localBook.removed && !localBook.waitSync)) {
+      if (
+        (localBook && (book.ts > localBook.ts)) ||
+        (!localBook && !book.removed)
+      ) {
         syncToLocalBooks.push(book);
       }
     });
@@ -115,17 +119,24 @@ class WebDAV {
     const syncToRemoteBooks: IBook[] = [];
     books.forEach(book => {
       const remoteBook = remoteTable[book.hash];
-      if (!remoteBook || (book.removed && !remoteBook.removed) || (remoteBook.removed && book.waitSync)) {
+      if (
+        (remoteBook && (book.ts > remoteBook.ts)) ||
+        (!remoteBook && !book.removed)
+      ) {
         syncToRemoteBooks.push(book);
       }
     });
 
+    console.log(books, remoteBooks, syncToLocalBooks, syncToRemoteBooks)
+
     if (syncToLocalBooks.length) {
       onUpdate(`检测到远端新书籍 ${syncToLocalBooks.length} 本，准备同步到本地...`);
       for (const book of syncToLocalBooks) {
+        const localBook = localTable[book.hash];
         if (book.removed) {
           onUpdate(`移除本地书籍 ${book.name}...`);
-          await this.removeBook(localTable[book.hash], books);
+          await this.removeBook(localBook, books);
+          localBook.ts = book.ts;
           continue;
         }
 
@@ -143,7 +154,9 @@ class WebDAV {
         }
   
         await fillBookCover(book);
-        books.splice(0, 0, book);
+        if (!localBook) {
+          books.splice(0, 0, book);
+        }
       }
     }
 
@@ -175,8 +188,6 @@ class WebDAV {
               onUpdate(`同步书籍 ${book.name} 的 ${name} 到远端：${~~(loaded / total * 100)}%`);
             }});
           }
-
-          delete book.waitSync;
         }
     
         booksStr = JSON.stringify(books);
@@ -248,7 +259,10 @@ class WebDAV {
     }
 
     if (!this.connected) {
-      await bk.worker.showMessage('为连接到服务器，仅使用本地笔记', 'info');
+      if (!this._connectWarnShowed) {
+        await bk.worker.showMessage('未连接到服务器时，仅使用本地笔记（仅提示一次）', 'info');
+        this._connectWarnShowed = true;
+      }
       return config;
     }
 
@@ -356,8 +370,8 @@ class WebDAV {
       const name = metadata.title;
       const author = metadata.creator;
 
-      if (!(await fs.exists(hash, 'Books'))) {
-        await fs.createDir(hash, 'Books');
+      if (!book) {
+        !(await fs.exists(hash, 'Books')) && await fs.createDir(hash, 'Books');
         await fs.writeFile(`${hash}/config.json`, '{"progress": 0,"notes": [],"bookmarks":[]}', 'Books');
         await fs.writeFile(`${hash}/${name}.epub`, content, 'Books');
         cover && await fs.writeFile(`${hash}/cover.png`, cover, 'Books');
@@ -367,13 +381,13 @@ class WebDAV {
           name,
           author,
           cover: coverUrl,
-          waitSync: true
+          ts: Date.now()
         });
       } else if (book.removed) {
         await fs.writeFile(`${hash}/${name}.epub`, content, 'Books');
         cover && await fs.writeFile(`${hash}/cover.png`, cover, 'Books');
         delete book.removed;
-        book.waitSync = true;
+        book.ts = Date.now();
       }
     } catch (error) {
       throw error;
@@ -397,6 +411,7 @@ class WebDAV {
     }
 
     book.removed = true;
+    book.ts = Date.now();
 
     return books;
   }

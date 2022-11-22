@@ -5,7 +5,7 @@
  * @Date   : 2022/9/27 23:50:18
  */
 import * as React from 'react';
-import {Slider} from 'hana-ui';
+import {Icon, Slider} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {TBookType} from '../../interfaces/protocols';
@@ -47,6 +47,8 @@ export function PageCtr(props: IPageCtrProps) {
       <div className={css.pageCtrSlider}>
         <Slider
           size='small'
+          icon={<Icon type='clover' color='#6c9' />}
+          color={'#6c9'}
           showValue={false}
           value={props.current}
           min={props.start}

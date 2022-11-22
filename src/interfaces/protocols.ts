@@ -11,7 +11,7 @@ export interface IBook {
   type: TBookType;
   name: string;
   author: string;
-  waitSync?: boolean;
+  ts: number;
   removed?: boolean;
   // 以下是在打开是自动拼接
   // 检查下`hash`目录下是否有cover

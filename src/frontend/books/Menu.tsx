@@ -33,6 +33,7 @@ export function Menu(props: IMenuProps) {
       <ButtonGroup className={css.menu}>
         <Button
           className={css.menuItem}
+          icon={'flower'}
           onClick={() => {
             setSettings({
               folder: props.settings.folder,
@@ -46,12 +47,15 @@ export function Menu(props: IMenuProps) {
         </Button>
         <Button
           className={css.menuItem}
+          icon={'reuse'}
+          iconStyle={{fontSize: '0.9rem'}}
           onClick={props.onSync}
         >
           同步
         </Button>
         <Button
           className={css.menuItem}
+          icon={'plus'}
           onClick={() => {
             selectBook().then(files => {
               files.length && props.onAddBooks(files)
@@ -62,6 +66,7 @@ export function Menu(props: IMenuProps) {
         </Button>
         <Button
           className={css.menuItem}
+          icon={'clover'}
           onClick={() => setShowAbout(true)}
         >
           关于
@@ -188,8 +193,10 @@ export function Menu(props: IMenuProps) {
         <div className={css.about}>
           <h1>Awaken</h1>
           <div className={css.aboutSlogan}>
-            <p>作为演员的时候，我们不可忘却愤怒。</p>
-            <p>作为观众的时候，我们不可忘却叹息。</p>
+            <p>作为演员的时候，</p>
+            <p>我们不可忘却愤怒。</p>
+            <p>作为观众的时候，</p>
+            <p>我们不可忘却叹息。</p>
           </div>
           <p className={css.aboutLinks}>
             <a href="https://github.com/dtysky/Awaken" target='_blank'>项目主页</a>

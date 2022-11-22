@@ -5,7 +5,7 @@
  * @Date   : 2022/9/16 23:08:40
  */
 import * as React from 'react';
-import {ButtonGroup, Button} from 'hana-ui';
+import {ButtonGroup, Button, IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {INoteMarkStatus} from './common';
@@ -22,39 +22,38 @@ interface IMenuProps {
 export function Menu(props: IMenuProps) {
   return (
     <ButtonGroup className={css.menu}>
-      <Button
+      <IconButton
+        //@ts-ignore
         className={css.menuItem}
-        type={'error'}
+        type={'backward'}
         onClick={props.onReturn}
-      >
-        返回
-      </Button>
-      <Button
+      />
+      <IconButton
+        //@ts-ignore
         className={css.menuItem}
+        type={'deploy'}
         onClick={props.onSync}
-      >
-        同步
-      </Button>
-      <Button
+      />
+      <IconButton
+        //@ts-ignore
         className={css.menuItem}
+        type={'list'}
         onClick={props.onIndexes}
-      >
-        目录
-      </Button>
-      <Button
+      />
+      <IconButton
+        //@ts-ignore
         className={css.menuItem}
+        type={'log'}
         onClick={props.onNotes}
-      >
-        笔记
-      </Button>
-      <Button
+      />
+      <IconButton
+        //@ts-ignore
         className={css.menuItem}
         onClick={props.onBookmark}
-        type={props.bookmarkStatus?.exist ? 'primary' : 'default'}
+        type={'paint'}
+        iconStyle={{color: props.bookmarkStatus?.exist ? '#6c9' : 'black'}}
         disabled={!props.bookmarkStatus}
-      >
-        书签
-      </Button>
+      />
     </ButtonGroup>
   )
 }
