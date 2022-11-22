@@ -44,7 +44,9 @@ export default function Reader(props: IReaderProps) {
   const [showNotes, setShowNotes] = React.useState<boolean>(false);
   const [loadingInfo, setLoadingInfo] = React.useState<string>('');
 
-  const saveConfig = () => webdav.saveConfig({ts, lastProgress: progress, progress, notes, bookmarks});
+  const saveConfig = () => webdav.saveConfig(props.book, {
+    ts, lastProgress: progress, progress, notes, bookmarks
+  });
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -59,7 +61,6 @@ export default function Reader(props: IReaderProps) {
         setLastProgress(book.config.lastProgress);
         setTs(book.config.ts);
         setState('Ready');
-        window.addEventListener('', saveConfig);
       }).catch(error => {
         console.error(error);
       });

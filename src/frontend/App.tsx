@@ -5,7 +5,7 @@
  * @Date   : 2022/9/16 23:07:42
  */
 import * as React from 'react';
-import {Loading, Notifications} from 'hana-ui';
+import {Loading, Notifications, Modal} from 'hana-ui';
 
 import bk from '../backend';
 import Reader from './reader/Reader';
@@ -23,21 +23,18 @@ import './styles/global.scss';
 
 type TState = 'Init' | 'Loading' | 'Books' | 'Reader';
 
-// 'H:/ComplexMind/Awaken/test'
-
 export default function App() {
   const [settings, setSettings] = React.useState<ISystemSettings>();
   const [books, setBooks] = React.useState<IBook[]>();
   const [state, setState] = React.useState<TState>('Init');
   const [current, setCurrent] = React.useState<number>(0);
   const [loadingInfo, setLoadingInfo] = React.useState<string>();
+  const [showModal, setShowModal] = React.useState<boolean>(false);
   const [notify, setNotify] = React.useState<{
     type: 'info' | 'success' | 'error' | 'warning';
     content: React.ReactNode;
     duration: number;
   }>();
-
-  return null;
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -52,30 +49,24 @@ export default function App() {
           });
         }
 
-        promise.then(() => {
-          if (s.webDav.url) {
-            return webdav.changeRemote(s.webDav.url, s.webDav.url, s.webDav.user);
-          }
+        promise
+          .then(() => webdav.changeLocal(s.folder))
+          .then(() => {
+            setSettings(s);
+            return loadBooks();
+          })
+          .then(bks => {
+            setBooks(bks);
+            setLoadingInfo('');
+            setState('Books');
 
-          return undefined;
-        }).then(() => webdav.changeLocal(s.folder))
-        .then(() => {
-          setSettings(s);
-          return loadBooks();
-        })
-        .then(bks => {
-          if (webdav.connected) {
-            return webdav.syncBooks(bks, info => setLoadingInfo(info));
-          }
-
-          return bks;
-        }).then(bks => {
-          setBooks(bks);
-          setLoadingInfo('');
-          setState('Books');
-        }).catch(error => {
-          setNotify({type: 'error', content: `初始化失败：${error.message}`, duration: 4});
-        });
+            if (s.webDav.url) {
+              setShowModal(true);
+            }
+          })
+          .catch(error => {
+            setNotify({type: 'error', content: `初始化失败：${error.message}`, duration: 4});
+          });
       }) 
     }
   });
@@ -90,11 +81,23 @@ export default function App() {
         <Books
           settings={settings}
           books={books}
-          onSelect={index => {
-            setCurrent(index);
-            setState('Reader');
+          onSelect={async index => {
+            setLoadingInfo('书籍打开中...');
+            const res = await webdav.checkAndDownloadBook(books[index]);
+            if (!res) {
+              setCurrent(index);
+              setState('Reader');
+              setLoadingInfo('');
+            } else {
+              setNotify({type: 'error', content: res, duration: 4});
+              setLoadingInfo('');
+            }
           }}
           onSync={async () => {
+            if (!webdav.connected && settings.webDav.url) {
+              await webdav.changeRemote(settings.webDav);
+            }
+
             await webdav.syncBooks(books, info => setLoadingInfo(info));
             setLoadingInfo('');
           }}
@@ -154,7 +157,7 @@ export default function App() {
             if (webDavChanged) {
               setLoadingInfo('连接服务器...');
               try {
-                await webdav.changeRemote(s.webDav.url, s.webDav.user, s.webDav.password)
+                await webdav.changeRemote(s.webDav);
                 setLoadingInfo('连接成功，开始同步文件...');
                 await webdav.syncBooks(books, info => setLoadingInfo(info));
               } catch (error) {
@@ -175,6 +178,7 @@ export default function App() {
           onClose={async bookConfig => {
             setLoadingInfo('合并与同步笔记和进度到远端...');
             await webdav.syncBook(books[current], bookConfig);
+            await webdav.setBookToTop(books, current);
             setState('Books');
             setLoadingInfo('');
           }}
@@ -184,6 +188,25 @@ export default function App() {
       {loadingInfo && <Loading mode='queue' content={loadingInfo} />}
 
       <Notifications notification={notify} />
+
+      <Modal
+        show={showModal}
+        title={'是否连接到服务器？'}
+        confirm={async () => {
+          // need user's action to connect server
+          setLoadingInfo('准备连接...')
+          await webdav.changeRemote(settings.webDav);
+          const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+          setBooks(bks);
+          setLoadingInfo('');
+          setShowModal(false);
+        }}
+        cancel={() => setShowModal(false)}
+      >
+        检测到已保存的远端服务器
+        <br/>
+        {settings?.webDav?.url}
+      </Modal>
     </div>
   )
 }

@@ -2,11 +2,11 @@ package com.dtysky.Awaken
 
 import android.R
 import android.app.AlertDialog
-import android.content.Context
 import android.content.DialogInterface
+import android.net.Uri
 import android.util.Base64
-import android.util.Log
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
 import android.webkit.WebResourceResponse
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,18 +14,16 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.collections.HashMap
 
 
 class AwakenJSB {
-    private val mContext: Context
+    private val mContext: MainActivity
     private val mAlertDialog: AlertDialog.Builder
     private val mBaseDir: Path
     private val mHeaders: HashMap<String, String>
 
-    constructor(context: Context) {
+    constructor(context: MainActivity) {
         mContext = context
         mBaseDir = context.getExternalFilesDir(null)!!.toPath()
         createDir("", "Settings")
@@ -65,6 +63,14 @@ class AwakenJSB {
         return path.toFile()
     }
 
+    private fun getStream(filePath: String, base: String): InputStream {
+        if (filePath.startsWith("content")) {
+            return mContext.contentResolver.openInputStream(Uri.parse(filePath))!!
+        }
+
+        return  getFile(filePath, base).inputStream()
+    }
+
     fun callMethod(
         method: String,
         params: Map<String, String>
@@ -89,12 +95,6 @@ class AwakenJSB {
 
         try {
             when (method) {
-                "selectFiles" -> {
-                    text = selectFiles(params.getValue("title"), params.getValue("extensions"))
-                }
-                "showMessage" -> {
-                    showMessage(params.getValue("message"), params.getValue("type"), params.getValue("title"))
-                }
                 "readTextFile" -> {
                     stream = readTextFile(params.getValue("filePath"), params.getValue("base"))
                 }
@@ -130,7 +130,7 @@ class AwakenJSB {
                 "application/json",
                 "utf-8",
                 200,
-                error.message.toString(),
+                "${method}: ${error.message.toString()}",
                 mHeaders,
                 ByteArrayInputStream(ByteArray(0))
             )
@@ -170,18 +170,10 @@ class AwakenJSB {
         }
     }
 
-    // return [fp1, fp2, ...]
-    private fun selectFiles(
-        title: String,
-        // ext1,ext2, ...
-        extensions: String,
-    ): String {
-        return "[]";
-    }
-
-    private fun showMessage(message: String, type: String, title: String = "") {
-        mAlertDialog.setTitle("Confirm Delete...")
-        mAlertDialog.setMessage("Are you sure you want delete this file?")
+    @JavascriptInterface
+    fun showMessage(message: String, type: String, title: String = "") {
+        mAlertDialog.setTitle(title)
+        mAlertDialog.setMessage(message)
 
         when (type) {
             "error" -> {
@@ -198,12 +190,28 @@ class AwakenJSB {
         mAlertDialog.show()
     }
 
+    @JavascriptInterface
+    fun selectFiles(
+        title: String,
+        // ext1|ext2, ...
+        mimeTypes: String
+    ) {
+        var res: Array<String> = arrayOf()
+        mContext.selectFiles(mimeTypes) {
+            res = it
+            mContext.mainWebView?.evaluateJavascript(
+                "Awaken_SelectFilesHandler(${JSONArray(res)})",
+                ValueCallback {  }
+            )
+        }
+    }
+
     private fun readTextFile(path: String, base: String): InputStream {
-        return getFile(path, base).inputStream()
+        return getStream(path, base)
     }
 
     private fun readBinaryFile(path: String, base: String): InputStream {
-        return getFile(path, base).inputStream()
+        return getStream(path, base)
     }
 
     private fun removeFile(path: String, base: String) {
@@ -231,10 +239,11 @@ class AwakenJSB {
 
     private fun readDir(path: String, base: String): String {
         val res: JSONArray = JSONArray()
+        val root = mBaseDir.resolve(base).resolve(path).toString() + "/"
 
         getFile(path, base).listFiles().forEach {
             val pair: JSONObject = JSONObject()
-            pair.put("path", it.path)
+            pair.put("path", it.path.replace(root, ""))
             pair.put("isDir", it.isDirectory)
             res.put(pair)
         }

@@ -24,10 +24,9 @@ async function callAPI<T extends keyof IResponse>(
   method: string,
   params: {[key: string]: string},
   data?: ArrayBuffer | string
-): Promise<IResponse[T]> {
-  if ((method === 'writeTextFile' || method === 'writeBinaryFile') && platform === 'ANDROID') {
+): Promise<IResponse[T]> {  
+  if (data && platform === 'ANDROID') {
     if (typeof data !== 'string') {
-      // to base64
       data = atob(data as ArrayBuffer);
     }
 
@@ -72,11 +71,11 @@ export const worker: IWorker = {
       settings = JSON.parse(txt);
     } else {
       settings = {
-        folder: '',
+        folder: 'unnecessary',
         webDav: {
-          url: '',
-          user: '',
-          password: ''
+          url: 'http://192.168.2.208:8888/dav',
+          user: 'dtysky',
+          password: '114514'
         },
         read: {
           font: '',
@@ -100,27 +99,21 @@ export const worker: IWorker = {
     return '';
   },
   async selectBook() {
-    return callAPI(
-      'json',
-      'selectFiles',
-      {
-        title: '选择EPub书籍',
-        // ext1,ext2...
-        extensions: 'epub'
+    return new Promise(resolve => {
+      window['Awaken_SelectFilesHandler'] = (files: string[]) => {
+        resolve(files);
       }
-    );
+
+      // mimeTypes: t1|t2...
+      jsb.selectFiles('选择书籍', 'application/epub+zip');
+    });
   },
-  async showMessage(message: string, type: TToastType, title?: string) {
-    // return callAPI(
-    //   'void',
-    //   'showMessage',
-    //   {title, type, message}
-    // );
-    alert(message);
+  async showMessage(message: string, type: TToastType, title: string = '') {
+    jsb.showMessage(message, type, title);
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', base: TBaseDir) {
-      const isBin = encoding === 'utf8';
+      const isBin = encoding !== 'utf8';
 
       return callAPI(
         isBin ? 'buffer': 'text',
@@ -129,7 +122,7 @@ export const worker: IWorker = {
       );
     },
     async writeFile(filePath: string, content: string | ArrayBuffer, base: TBaseDir) {
-      const isBin = content === 'string';
+      const isBin = typeof content !== 'string';
 
       callAPI(
         'void',
@@ -142,10 +135,10 @@ export const worker: IWorker = {
       return callAPI('void', 'removeFile', {filePath, base});
     },
     async createDir(dirPath: string, base: TBaseDir) {
-      return callAPI('void', 'removeFile', {dirPath, base});
+      return callAPI('void', 'createDir', {dirPath, base});
     },
     async removeDir(dirPath: string, base: TBaseDir) {
-      return callAPI('void', 'removeFile', {dirPath, base});
+      return callAPI('void', 'removeDir', {dirPath, base});
     },
     async readDir(dirPath: string, base: TBaseDir) {
       return callAPI('json', 'readDir', {dirPath, base});

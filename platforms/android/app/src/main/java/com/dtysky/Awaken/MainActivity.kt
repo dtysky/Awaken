@@ -1,18 +1,18 @@
 package com.dtysky.Awaken
 
-import android.os.Build
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.view.WindowInsets
-import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 
 class MainActivity : AppCompatActivity() {
-    private var mainWebView: WebView? = null
+    var mainWebView: WebView? = null
     private var jsb: AwakenJSB? = null
+    private var selectFilesCallback: ((files: Array<String>) -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,12 +20,12 @@ class MainActivity : AppCompatActivity() {
         hideStatusAndTitleBar()
 
         WebView.setWebContentsDebuggingEnabled(true)
-        val mainWebView: WebView = findViewById(R.id.main)
+        mainWebView = findViewById(R.id.main)
         initWebViewSetting(mainWebView)
         var base = getExternalFilesDir(null)
         jsb = AwakenJSB(this)
-        mainWebView.addJavascriptInterface(jsb!!,"Awaken")
-        mainWebView.loadUrl("http://192.168.2.208:8888")
+        mainWebView?.addJavascriptInterface(jsb!!,"Awaken")
+        mainWebView?.loadUrl("http://192.168.2.208:8888")
     }
 
     private fun initWebViewSetting(webView: WebView?) {
@@ -60,6 +60,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun selectFiles(
+        mimeTypes: String,
+        callback: (files: Array<String>) -> Unit
+    ) {
+        selectFilesCallback = callback
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = mimeTypes
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        }
+
+        startActivityForResult(intent, 4)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+        if (requestCode == 4) {
+            if (resultCode != RESULT_OK) {
+                selectFilesCallback?.invoke(arrayOf())
+            } else {
+                resultData?.data?.also {uri ->
+                    // Perform operations on the document using its URI.
+                    Log.d("Awaken", uri.toString())
+                    selectFilesCallback?.invoke(arrayOf(uri.toString()))
+                }
+            }
+            selectFilesCallback = null
+            return
+        }
+
+        super.onActivityResult(requestCode, resultCode, resultData)
+    }
+
     override fun onResume() {
         super.onResume()
         mainWebView?.run {
@@ -83,6 +115,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun hideStatusAndTitleBar() {
         supportActionBar?.hide()
+
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.setStatusBarColor(ContextCompat.getColor(this, R.color.bar))
 //        val decorView = window.decorView
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
 //            val windowInsetsController: WindowInsetsController = decorView.getWindowInsetsController()

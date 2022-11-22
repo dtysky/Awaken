@@ -11,6 +11,7 @@ import * as md5 from 'js-md5';
 import bk from '../backend';
 import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
 import {fillBookCover} from './utils';
+import { ISystemSettings } from '../interfaces';
 
 export interface IBookContent {
   content: ArrayBuffer;
@@ -30,13 +31,13 @@ class WebDAV {
     return !!this._client;
   }
 
-  public async changeRemote(url: string, user: string, password: string) {
+  public async changeRemote(options: ISystemSettings['webDav']) {
     this._client = createClient(
-      url,
+      options.url,
       {
         authType: AuthType.Digest,
-        username: user,
-        password: password
+        username: options.user,
+        password: options.password
       }
     );
 
@@ -135,7 +136,10 @@ class WebDAV {
         
         for (const stat of contents) {
           // 这里只同步目录配置和封面，书籍等到加载时在真正下载！
-          !/\.epub$/.test(stat.filename) && await this._writeWithCheck(book, stat.filename, onUpdate);
+          if (stat.type !== 'file') {
+            continue;
+          }
+          !/\.epub$/.test(stat.basename) && await this._writeWithCheck(book, stat.basename, onUpdate);
         }
   
         await fillBookCover(book);
@@ -151,7 +155,6 @@ class WebDAV {
         onUpdate(`检测到本地新书籍 ${syncToRemoteBooks.length} 本，准备同步到远端...`);
         for (const book of syncToRemoteBooks) {
           if (book.removed) {
-            console.log(`删除远端书籍 ${book.name}...`);
             onUpdate(`删除远端书籍 ${book.name}...`);
             await this._client.deleteFile(`${`${book.hash}/${book.name}.epub`}`);
             continue;
@@ -201,20 +204,36 @@ class WebDAV {
     }
 
     const tmp = await this._client.getFileContents(fp, {format: 'binary', onDownloadProgress: ({loaded, total}) => {
-      onUpdate(`拉取书籍 ${book.name} 的 ${filename} 到本地：${~~(loaded / total * 100)}%`);
+      onUpdate?.(`拉取书籍 ${book.name} 的 ${filename} 到本地：${~~(loaded / total * 100)}%`);
     }});
     return await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
+  }
+
+  async checkAndDownloadBook(book: IBook): Promise<string> {
+    const bookFp = `${book.hash}/${book.name}.epub`;
+
+    if (!(await bk.worker.fs.exists(bookFp, 'Books')) && !this.connected) {
+      return '书籍未下载并且未连接到服务器，请先连接服务器';
+    };
+
+    try {
+      await this._writeWithCheck(book, `${book.name}.epub`);
+      return '';
+    } catch (error) {
+      return `书籍未下载出错：${error.message || error}`;
+    }
   }
   
   async loadBook(book: IBook): Promise<IBookContent> {
     const {fs} = bk.worker;
+    const bookFp = `${book.hash}/${book.name}.epub`;
 
     const config = await this.syncBook(book);
     const pages = await fs.exists(`${book.hash}/pages.json`, 'Books') &&
       await fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string;
 
     return {
-      content: await fs.readFile(`${book.hash}/${book.name}.epub`, 'binary', 'Books') as ArrayBuffer,
+      content: await fs.readFile(bookFp, 'binary', 'Books') as ArrayBuffer,
       config, pages
     }
   }
@@ -228,9 +247,12 @@ class WebDAV {
       config = JSON.parse(await bk.worker.fs.readFile(`${book.hash}/config.json`, 'utf8', 'Books') as string);
     }
 
-    await this._writeWithCheck(book, `${book.name}.epub`);
-    const remote = JSON.parse(await this._client.getFileContents(`${book.hash}/config.json`, {format: 'text'}) as string);
+    if (!this.connected) {
+      await bk.worker.showMessage('为连接到服务器，仅使用本地笔记', 'info');
+      return config;
+    }
 
+    const remote = JSON.parse(await this._client.getFileContents(`${book.hash}/config.json`, {format: 'text'}) as string);
     config = this._mergeConfig(config, remote);
     
     const configStr = JSON.stringify(config);
@@ -294,8 +316,16 @@ class WebDAV {
     return res;
   }
 
-  public async saveConfig(config: IBookConfig) {
+  public async saveConfig(book: IBook, config: IBookConfig) {
+    await bk.worker.fs.writeFile(`${book.hash}/config.json`, JSON.stringify(config), 'Books');
+  }
 
+  public async setBookToTop(books: IBook[], index: number) {
+    const book = books[index];
+    books.splice(index, 1);
+    books.splice(0, 0, book);
+
+    await bk.worker.fs.writeFile('books.json', JSON.stringify(books), 'Books');
   }
 
   public async addBook(fp: string, books: IBook[]): Promise<IBook[]> {
