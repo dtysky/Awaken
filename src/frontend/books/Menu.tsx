@@ -207,7 +207,7 @@ export function Menu(props: IMenuProps) {
 
           <div className={css.aboutCopyright}>
             <p>Copyright © 2022</p>
-            <p>戴天宇, Tianyu Dai (dtysky@outlook.com)</p>
+            <p>戴天宇, Tianyu Dai (dtysky@outlook.com) 拥有所有权利</p>
             <p>本软件为开源软件，遵循协议</p>
             <a href="https://www.gnu.org/licenses/lgpl-3.0.html" target='_blank'>GNU Lesser General Public License (LGPL)</a>
           </div>
