@@ -5,7 +5,7 @@
  * @Date   : 2022/9/16 23:07:42
  */
 import * as React from 'react';
-import {Loading, Notifications, Modal} from 'hana-ui';
+import {Loading, Modal} from 'hana-ui';
 
 import bk from '../backend';
 import Reader from './reader/Reader';
@@ -30,11 +30,6 @@ export default function App() {
   const [current, setCurrent] = React.useState<number>(0);
   const [loadingInfo, setLoadingInfo] = React.useState<string>();
   const [showModal, setShowModal] = React.useState<boolean>(false);
-  const [notify, setNotify] = React.useState<{
-    type: 'info' | 'success' | 'error' | 'warning';
-    content: React.ReactNode;
-    duration: number;
-  }>();
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -65,7 +60,7 @@ export default function App() {
             }
           })
           .catch(error => {
-            setNotify({type: 'error', content: `初始化失败：${error.message}`, duration: 4});
+            bk.worker.showMessage(`初始化失败：${error.message}`, 'error');
           });
       }) 
     }
@@ -89,7 +84,7 @@ export default function App() {
               setState('Reader');
               setLoadingInfo('');
             } else {
-              setNotify({type: 'error', content: res, duration: 4});
+              bk.worker.showMessage(res, 'error');
               setLoadingInfo('');
             }
           }}
@@ -104,7 +99,7 @@ export default function App() {
           }}
           onAddBooks={async files => {
             if (!webdav.connected) {
-              setNotify({type: 'error', content: `未连接到服务器，请现在“设定”中配置。`, duration: 4});
+              bk.worker.showMessage(`未连接到服务器，请现在“设定”中配置。`, 'error');
               return;
             }
 
@@ -151,8 +146,8 @@ export default function App() {
                 await webdav.changeLocal(s.folder, info => setLoadingInfo(info));
               } catch (error) {
                 s.folder = settings.folder;
-                console.error(error, s)
-                setNotify({type: 'error', content: `修改本地目录失败： ${error.message || error}`, duration: 4});
+                console.error(error, s);
+                bk.worker.showMessage(`修改本地目录失败： ${error.message || error}`, 'error');
               }
             }
 
@@ -165,7 +160,7 @@ export default function App() {
                 setBooks(bks);
               } catch (error) {
                 s.webDav = Object.assign({}, settings.webDav);
-                setNotify({type: 'error', content: `连接失败： ${error.message || error}`, duration: 4});
+                bk.worker.showMessage(`连接失败： ${error.message || error}`, 'error');
               }
             }
 
@@ -195,19 +190,17 @@ export default function App() {
         />
       )}
 
-      <Notifications notification={notify} />
-
       <Modal
         show={showModal}
         title={'是否连接到服务器？'}
         confirm={async () => {
           // need user's action to connect server
           setLoadingInfo('准备连接...')
+          setShowModal(false);
           await webdav.changeRemote(settings.webDav);
           const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
           setBooks(bks);
           setLoadingInfo('');
-          setShowModal(false);
         }}
         cancel={() => setShowModal(false)}
       >
