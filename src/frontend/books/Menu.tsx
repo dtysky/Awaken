@@ -191,7 +191,11 @@ export function Menu(props: IMenuProps) {
         showClose={false}
       >
         <div className={css.about}>
-          <h1>Awaken</h1>
+          {/* <h1>Awaken</h1> */}
+          <img
+            className={css.aboutLogo}
+            src={require('../assets/logo.png').default}
+          />
           <div className={css.aboutSlogan}>
             <p>作为演员的时候，</p>
             <p>我们不可忘却愤怒。</p>
@@ -200,7 +204,7 @@ export function Menu(props: IMenuProps) {
           </div>
           <p className={css.aboutLinks}>
             <a href="https://github.com/dtysky/Awaken" target='_blank'>项目主页</a>
-            <a href="https://github.com/dtysky/Awaken/releases" target='_blank'>获取新版本</a>
+            <a href="https://github.com/dtysky/Awaken/releases" target='_blank'>检查更新</a>
           </p>
 
           <div className={css.aboutCopyright}>

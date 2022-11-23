@@ -88,12 +88,18 @@
 }
 
 .about {
-  padding: 2rem 2rem;
   text-align: center;
 }
 
+.aboutLogo {
+  display: block;
+  width: 60%;
+  min-width: 300px;
+  margin: auto;
+}
+
 .aboutSlogan {
-  margin-top: 2rem;
+  margin-top: 1rem;
   line-height: 1.4rem;
 }
 
