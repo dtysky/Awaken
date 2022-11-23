@@ -7,16 +7,18 @@
 import * as React from 'react';
 import {Sidebar, Loading, Modal} from 'hana-ui';
 
+import bk from '../../backend';
 import webdav from '../webdav';
 import {EJumpAction, Viewer} from './Viewer';
 import {IBook, IBookConfig, IBookNote, } from '../../interfaces/protocols';
-import {changeNote, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
+import {buildStyleUrl, changeNote, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
 import {Notes} from './Notes';
 import {PageCtr} from './PageCtr';
 
 import css from '../styles/reader.module.scss';
+import {ISystemSettings} from '../../interfaces';
 
 export interface IReaderProps {
   book: IBook;
@@ -28,6 +30,7 @@ type TState = 'Init' | 'Loading' | 'Parser' | 'Ready';
 let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void;
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
+  const [readSettings, setReadSettings] = React.useState<ISystemSettings['read']>();
   const [content, setContent] = React.useState<ArrayBuffer>();
   const [pages, setPages] = React.useState<string>();
   const [bookmarks, setBookmarks] = React.useState<IBookNote[]>([]);
@@ -38,6 +41,7 @@ export default function Reader(props: IReaderProps) {
   const [progress, setProgress] = React.useState<number>(1);
   const [lastProgress, setLastProgress] = React.useState<number>(1);
   const [ts, setTs] = React.useState<number>(0);
+  const [showJumpModal, setShowJumpModal] = React.useState<boolean>(false);
   const [bookmarkInfo, setBookmarkInfo] = React.useState<IBookNote>();
   const [bookmarkStatus, setBookmarkStatus] = React.useState<INoteMarkStatus>();
   const [showIndexes, setShowIndexes] = React.useState<boolean>(false);
@@ -52,7 +56,11 @@ export default function Reader(props: IReaderProps) {
     if (state === 'Init') {
       setState('Loading');
       setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`)
-      webdav.loadBook(props.book).then(book => {
+      
+      bk.worker.loadSettings().then(settings => {
+        setReadSettings(settings.read);
+        return webdav.loadBook(props.book);
+      }).then(book => {
         setContent(book.content);
         setPages(book.pages);
         setBookmarks(book.config.bookmarks);
@@ -136,6 +144,7 @@ export default function Reader(props: IReaderProps) {
                 </Sidebar>
               </div>
               <Viewer
+                bookStyle={buildStyleUrl(readSettings)}
                 content={content}
                 pages={pages}
                 bookmarks={bookmarks}
@@ -148,6 +157,12 @@ export default function Reader(props: IReaderProps) {
                   setCurrentIndex(indexes[0]);
                   setRange({start: 1, max: pgs.length});
                   jump = jumpTo;
+                  jump(EJumpAction.Page, progress);
+
+                  if (lastProgress !== progress) {
+                    setShowJumpModal(true);
+                  }
+
                   setLoadingInfo('');
                 }}
                 onProgress={p => {
@@ -196,12 +211,16 @@ export default function Reader(props: IReaderProps) {
       )}
 
       <Modal
-        show={progress !== lastProgress}
+        show={showJumpModal}
         confirm={() => {
           jump(EJumpAction.Page, lastProgress);
           setProgress(lastProgress);
+          setShowJumpModal(false);
         }}
-        cancel={() => setLastProgress(progress)}
+        cancel={() => {
+          setLastProgress(progress);
+          setShowJumpModal(false);
+        }}
       >
         检测到最新阅读进度{lastProgress}，当前{progress}，是否跳转？
       </Modal>

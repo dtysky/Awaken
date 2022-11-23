@@ -45,6 +45,7 @@ export const worker: IWorker = {
           font: '',
           fontSize: 16,
           lineSpace: 16,
+          color: '#000',
           background: '#fff',
           light: 1
         }

@@ -9,7 +9,6 @@ import {ButtonGroup, Button, Modal, Form, FormItem, Text, FormGroup} from 'hana-
 
 import bk from '../../backend';
 import {ISystemSettings} from '../../interfaces';
-import {IBook} from '../../interfaces/protocols';
 import {selectBook, selectFolder} from '../utils';
 import css from '../styles/books.module.scss';
 
@@ -191,7 +190,6 @@ export function Menu(props: IMenuProps) {
         showClose={false}
       >
         <div className={css.about}>
-          {/* <h1>Awaken</h1> */}
           <img
             className={css.aboutLogo}
             src={require('../assets/logo.png').default}

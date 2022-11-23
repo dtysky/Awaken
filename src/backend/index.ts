@@ -11,8 +11,6 @@ import {worker as nWorker} from '../backend/native';
 // inject runtime
 const isNative = !!window['Awaken'];
 
-console.log(isNative)
-
 const exp: {
   worker: IWorker,
   supportChangeFolder: boolean

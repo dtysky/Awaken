@@ -127,8 +127,6 @@ class WebDAV {
       }
     });
 
-    console.log(books, remoteBooks, syncToLocalBooks, syncToRemoteBooks)
-
     if (syncToLocalBooks.length) {
       onUpdate(`检测到远端新书籍 ${syncToLocalBooks.length} 本，准备同步到本地...`);
       for (const book of syncToLocalBooks) {
@@ -187,7 +185,7 @@ class WebDAV {
             }
 
             const data = await fs.readFile(fp, 'binary', 'Books');
-            await this._client.putFileContents(fp, data, {overwrite: false, onUploadProgress: ({loaded, total}) => {
+            await this._client.putFileContents(fp, data, {overwrite: name !== 'config.json', onUploadProgress: ({loaded, total}) => {
               onUpdate(`同步书籍 ${book.name} 的 ${name} 到远端：${~~(loaded / total * 100)}%`);
             }});
           }

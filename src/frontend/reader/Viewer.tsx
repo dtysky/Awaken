@@ -10,7 +10,7 @@ import ePub from 'epubjs';
 import css from '../styles/reader.module.scss';
 import {mergeCFI, IBookIndex} from './common';
 import {Tools} from './Tools';
-import { IBookNote } from '../../interfaces/protocols';
+import {IBookNote} from '../../interfaces/protocols';
 
 export enum EJumpAction {
   CFI,
@@ -22,6 +22,7 @@ export enum EJumpAction {
 
 export interface IViewerProps {
   content: ArrayBuffer;
+  bookStyle: string;
   pages?: string;
   bookmarks: IBookNote[];
   notes: IBookNote[];
@@ -70,7 +71,8 @@ export function Viewer(props: IViewerProps) {
       rendition = book.renderTo('epub-viewer', {
         width: '100%',
         height: '100%',
-        method: 'default'
+        method: 'default',
+        stylesheet: props.bookStyle
       } as any);
 
       book.loaded.navigation.then(nav => {
@@ -124,10 +126,10 @@ export function Viewer(props: IViewerProps) {
             }
           };
 
-          props.onLoad(indexes, pages, jump);
-
-          rendition.display(rendition.book.locations.cfiFromLocation(0));
-          setState('Ready');
+          rendition.display(rendition.book.locations.cfiFromLocation(0)).then(() => {
+            props.onLoad(indexes, pages, jump);
+            setState('Ready');
+          });
         });
       });
 
@@ -135,11 +137,16 @@ export function Viewer(props: IViewerProps) {
         setNoteCFI(cfiRange);
       }
 
-      rendition.on('rendered', () => {
+      rendition.on('locationChanged', () => {
+        console.log('locationChanged')
         content?.off('selected', addNote);
         const c = rendition.getContents()[0];
         c?.on('selected', addNote);
         setContent(c);
+      });
+
+      rendition.on('markClicked', (cfi: string) => {
+        setNoteCFI(cfi);
       });
     }
   });

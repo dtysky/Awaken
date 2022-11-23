@@ -5,6 +5,7 @@
  * @Date   : 2022/10/29 15:38:52
  */
 import {EpubCFI} from 'epubjs';
+import { ISystemSettings } from '../../interfaces';
 import {IBookNote} from '../../interfaces/protocols';
 
 const parser = new EpubCFI() as any;
@@ -99,4 +100,30 @@ export function changeNote(
   }
 
   return Object.assign({}, status);
+}
+
+let preHash: string = '';
+let preStyle: string;
+export function buildStyleUrl(settings: ISystemSettings['read']): string {
+  const hash = Object.keys(settings).map(key => settings[key]).join('|');
+
+  if (hash === preHash) {
+    return preStyle;
+  }
+
+  const style = `
+img {
+  width: 100%;
+}
+
+a {
+  color: #6c9;
+}
+  `
+
+  URL.revokeObjectURL(preStyle);
+  preHash = hash;
+  preStyle = URL.createObjectURL(new Blob([style], {type: 'text/css'}));
+
+  return preStyle;
 }
