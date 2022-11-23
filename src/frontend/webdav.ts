@@ -156,6 +156,9 @@ class WebDAV {
         await fillBookCover(book);
         if (!localBook) {
           books.splice(0, 0, book);
+        } else {
+          localBook.ts = book.ts;
+          delete localBook.removed;
         }
       }
     }
