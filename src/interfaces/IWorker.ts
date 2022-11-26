@@ -33,4 +33,5 @@ export interface IWorker {
   selectFolder(): Promise<string>;
   selectBook(): Promise<string[]>;
   showMessage(msg: string, type: TToastType, title?: string): Promise<void>;
+  setBackground(r: number, g: number, b: number): Promise<void>;
 }

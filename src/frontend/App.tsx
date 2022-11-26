@@ -177,6 +177,7 @@ export default function App() {
             setLoadingInfo('合并与同步笔记和进度到远端...');
             await webdav.syncBook(books[current], bookConfig);
             await webdav.setBookToTop(books, current);
+            bk.worker.setBackground(1, 1, 1);
             setState('Books');
             setLoadingInfo('');
           }}

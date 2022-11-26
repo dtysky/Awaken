@@ -56,6 +56,7 @@ export default function Reader(props: IReaderProps) {
     if (state === 'Init') {
       setState('Loading');
       setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`)
+      bk.worker.setBackground(251 / 255, 240 / 255, 217 / 255)
       
       bk.worker.loadSettings().then(settings => {
         setReadSettings(settings.read);

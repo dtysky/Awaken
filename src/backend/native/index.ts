@@ -10,7 +10,7 @@ import {atob} from './utils';
 
 const jsb = window['Awaken'];
 const platform = jsb?.getPlatform() as 'ANDROID' | 'IOS';
-const API_PREFIX = 'http://awaken.api';
+const API_PREFIX = platform === 'ANDROID' ? 'http://awaken.api' : 'awaken://awaken.api';
 
 interface IResponse {
   buffer: ArrayBuffer;
@@ -35,20 +35,23 @@ async function callAPI<T extends keyof IResponse>(
 
   const p = Object.keys(params).map(key => `${key}=${encodeURIComponent(params[key] ?? '')}`).join('&');
   const url = `${API_PREFIX}/${method}?${p}`;
+
   const res = await fetch(url, {
     method: data ? 'POST' : 'GET',
     cache: 'no-cache',
     body: data
   });
 
-  if (res.statusText !== 'OK') {
-    throw new Error(res.statusText);
+  // @todo: android
+  const errorMessage = res.headers.get('X-Error-Message');
+  if (errorMessage) {
+    throw new Error(`${errorMessage}: ${method}(${JSON.stringify(params)}`);
   }
 
   if (type === 'json') {
     return res.json();
   }
-  
+
   if (type === 'buffer') {
     return res.arrayBuffer() as any;
   }
@@ -69,11 +72,15 @@ export const worker: IWorker = {
     if (await worker.fs.exists('settings.json', 'Settings')) {
       const txt = await worker.fs.readFile('settings.json', 'utf8', 'Settings') as string;
       settings = JSON.parse(txt);
+      // settings.read.color = [0, 0, 0]
+      // settings.read.background = [255, 255, 255]
+      // settings.read.highlight = [102, 204, 153],
+      // await worker.fs.writeFile('settings.json', JSON.stringify(settings), 'Settings');
     } else {
       settings = {
         folder: 'unnecessary',
         webDav: {
-          url: 'http://192.168.2.208:8888/dav',
+          url: 'http://192.168.2.204:8888/dav',
           user: 'dtysky',
           password: '114514'
         },
@@ -81,8 +88,9 @@ export const worker: IWorker = {
           font: '',
           fontSize: 16,
           lineSpace: 16,
-          color: '#000',
-          background: '#fff',
+          color: [0, 0, 0],
+          background: [255, 255, 255],
+          highlight: [102, 204, 153],
           light: 1
         }
       };
@@ -108,6 +116,9 @@ export const worker: IWorker = {
       // mimeTypes: t1|t2...
       jsb.selectFiles('选择书籍', 'application/epub+zip');
     });
+  },
+  async setBackground(r: number, g: number, b: number) {
+    jsb.setBackground(r, g, b);
   },
   async showMessage(message: string, type: TToastType, title: string = '') {
     jsb.showMessage(message, type, title);

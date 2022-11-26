@@ -45,8 +45,9 @@ export const worker: IWorker = {
           font: '',
           fontSize: 16,
           lineSpace: 16,
-          color: '#000',
-          background: '#fff',
+          color: [0, 0, 0],
+          background: [255, 255, 255],
+          highlight: [102, 204, 153],
           light: 1
         }
       };
@@ -92,6 +93,9 @@ export const worker: IWorker = {
   },
   async showMessage(msg: string, type: TToastType, title?: string) {
     await dialog.message(msg, {type, title});
+  },
+  async setBackground(r: number, g: number, b: number) {
+  
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {

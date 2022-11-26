@@ -15,8 +15,9 @@ export interface ISystemSettings {
     font: string;
     fontSize: number;
     lineSpace: number;
-    color: string;
-    background: string;
+    color: number[];
+    background: number[];
+    highlight: number[];
     light: number;
   };
 }
