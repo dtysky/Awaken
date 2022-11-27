@@ -34,4 +34,5 @@ export interface IWorker {
   selectBook(): Promise<string[]>;
   showMessage(msg: string, type: TToastType, title?: string): Promise<void>;
   setBackground(r: number, g: number, b: number): Promise<void>;
+  onAppHide(callback: () => void): void;
 }

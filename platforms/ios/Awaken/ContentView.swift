@@ -49,16 +49,18 @@ struct WebView: UIViewRepresentable {
         config.setURLSchemeHandler(AwakenXHRHandler(jsb: jsb), forURLScheme: "awaken")
 
         let wkWebView = WKWebView(frame: .zero, configuration: config)
-        
         wkWebView.scrollView.bounces = false;
 
         let request = URLRequest(url: url)
         wkWebView.load(request)
+        
+        jsb.setWebview(webview: wkWebView)
 
         return wkWebView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+
     }
 }
 

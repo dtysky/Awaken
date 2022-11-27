@@ -8,6 +8,7 @@ import * as React from 'react';
 import ColorHash from 'color-hash'
 import {IconButton, Modal} from 'hana-ui';
 
+import bk from '../../backend';
 import {IBook} from '../../interfaces/protocols';
 import {Menu} from './Menu';
 import {ISystemSettings} from '../../interfaces';
@@ -88,11 +89,15 @@ function Book(props: IBookProps) {
         backgroundColor: colorHash.hex(props.book.hash)
       }}
     >
-      <IconButton
-        type='close'
-        size='large'
-        onClick={props.onDelete}
-      />
+      {
+        bk.supportAddDeleteBook && (
+          <IconButton
+            type='close'
+            size='large'
+            onClick={props.onDelete}
+          />
+        )
+      }
       <div onClick={props.onSelect}>
         {
           !props.book.cover && (

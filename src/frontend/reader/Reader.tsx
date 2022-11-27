@@ -70,6 +70,8 @@ export default function Reader(props: IReaderProps) {
         setLastProgress(book.config.lastProgress);
         setTs(book.config.ts);
         setState('Ready');
+
+        bk.worker.onAppHide(saveConfig);
       }).catch(error => {
         console.error(error);
       });
@@ -86,7 +88,10 @@ export default function Reader(props: IReaderProps) {
             <div className={css.top}>
               <Menu
                 bookmarkStatus={bookmarkStatus}
-                onReturn={() => props.onClose({ts: Date.now(), lastProgress: progress, progress, notes, bookmarks})}
+                onReturn={() => {
+                  bk.worker.onAppHide(() => {});
+                  props.onClose({ts: Date.now(), lastProgress: progress, progress, notes, bookmarks});
+                }}
                 onSync={async () => {
                   setLoadingInfo('同步中...');
                   const config = await webdav.syncBook(props.book, {ts, lastProgress, progress, notes, bookmarks});

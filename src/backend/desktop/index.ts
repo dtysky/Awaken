@@ -97,6 +97,9 @@ export const worker: IWorker = {
   async setBackground(r: number, g: number, b: number) {
   
   },
+  onAppHide(callback: () => void) {
+
+  },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);

@@ -9,7 +9,7 @@ import {ISystemSettings} from '../../interfaces';
 import {atob} from './utils';
 
 const jsb = window['Awaken'];
-const platform = jsb?.getPlatform() as 'ANDROID' | 'IOS';
+export const platform = jsb?.getPlatform() as 'ANDROID' | 'IOS';
 const API_PREFIX = platform === 'ANDROID' ? 'http://awaken.api' : 'awaken://awaken.api';
 
 interface IResponse {
@@ -122,6 +122,9 @@ export const worker: IWorker = {
   },
   async showMessage(message: string, type: TToastType, title: string = '') {
     jsb.showMessage(message, type, title);
+  },
+  onAppHide(callback: () => void) {
+    window['Awaken_AppHideCB'] = callback;
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', base: TBaseDir) {

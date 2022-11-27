@@ -52,17 +52,21 @@ export function Menu(props: IMenuProps) {
         >
           同步
         </Button>
-        <Button
-          className={css.menuItem}
-          icon={'plus'}
-          onClick={() => {
-            selectBook().then(files => {
-              files.length && props.onAddBooks(files)
-            })
-          }}
-        >
-          添加
-        </Button>
+        {
+          bk.supportAddDeleteBook && (
+            <Button
+              className={css.menuItem}
+              icon={'plus'}
+              onClick={() => {
+                selectBook().then(files => {
+                  files.length && props.onAddBooks(files)
+                })
+              }}
+            >
+              添加
+            </Button>
+          )
+        }
         <Button
           className={css.menuItem}
           icon={'clover'}

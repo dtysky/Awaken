@@ -5,12 +5,32 @@
  * @Date   : 2022/10/20 23:29:09
  */
 import * as React from 'react';
-import ePub from 'epubjs';
+import ePub, {Contents} from 'epubjs';
 
-import css from '../styles/reader.module.scss';
+import bk from '../../backend';
 import {mergeCFI, IBookIndex} from './common';
 import {Tools} from './Tools';
 import {IBookNote} from '../../interfaces/protocols';
+import css from '../styles/reader.module.scss';
+
+const EVENT_NAME = bk.supportChangeFolder ? 'mouseup' : 'touchend';
+(Contents as any).prototype.onSelectionChange = function(e: Event) {
+  const t = this as any;
+
+  if (t.doingSelection) {
+    return;
+  }
+
+  const handler = function() {
+    t.window.removeEventListener(EVENT_NAME, handler);
+    const selection = t.window.getSelection();
+    t.triggerSelectedEvent(selection);
+    t.doingSelection = false;
+  };
+
+  t.window.addEventListener(EVENT_NAME, handler);
+  t.doingSelection = true;
+}
 
 export enum EJumpAction {
   CFI,
@@ -72,7 +92,8 @@ export function Viewer(props: IViewerProps) {
         width: '100%',
         height: '100%',
         method: 'default',
-        stylesheet: props.bookStyle
+        stylesheet: props.bookStyle,
+        allowScriptedContent: true
       } as any);
 
       book.loaded.navigation.then(nav => {

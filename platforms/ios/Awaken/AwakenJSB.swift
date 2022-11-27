@@ -25,6 +25,7 @@ public class AwakenJSB: NSObject, WKScriptMessageHandler {
     private var mFileManager: FileManager
     private var mWKController: WKUserContentController
     private var mOnChangeBg: (_ color: CGColor) -> ()
+    private var webview: WKWebView?
 
     init(controller: WKUserContentController, onChangeBg: @escaping (_ color: CGColor) -> ()) {
         let paths = NSSearchPathForDirectoriesInDomains(
@@ -59,6 +60,15 @@ window.Awaken = {
         mWKController.addUserScript(WKUserScript(source: initJS, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         mWKController.add(self, name: "showMessage")
         mWKController.add(self, name: "setBackground")
+    }
+    
+    public func setWebview(webview: WKWebView) {
+        self.webview = webview
+        NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIScene.didEnterBackgroundNotification, object: nil)
+    }
+    
+    @objc func didEnterBackground() {
+        webview?.evaluateJavaScript("window.Awaken_AppHideCB && window.Awaken_AppHideCB()")
     }
 
     public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
