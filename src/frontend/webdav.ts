@@ -280,17 +280,18 @@ class WebDAV {
   private _mergeConfig(local: IBookConfig, remote: IBookConfig): IBookConfig {
     const localTS = local.ts || Date.now();
     const remoteTS = remote.ts || Date.now();
+    remote.removedTs = remote.removedTs || {};
     local.lastProgress = local.lastProgress || local.progress;
     remote.lastProgress = remote.lastProgress || remote.progress;
     local.ts = Math.max(localTS, remoteTS);
     local.lastProgress = localTS > remoteTS ? local.lastProgress : remote.lastProgress;
-    local.notes = this._mergeNotes(local.notes, remote.notes);
-    local.bookmarks = this._mergeNotes(local.bookmarks, remote.bookmarks);
+    local.notes = this._mergeNotes(local.notes, remote.notes, remote.removedTs);
+    local.bookmarks = this._mergeNotes(local.bookmarks, remote.bookmarks, remote.removedTs);
 
     return local;
   }
 
-  private _mergeNotes(localNotes: IBookNote[], remoteNotes: IBookNote[]): IBookNote[] {
+  private _mergeNotes(localNotes: IBookNote[], remoteNotes: IBookNote[], removedTs: {[cfi: string]: number}): IBookNote[] {
     const res: IBookNote[] = [];
     let localIndex: number = 0;
     let remoteIndex: number = 0;
@@ -311,16 +312,27 @@ class WebDAV {
         localIndex += 1;
       }
 
+      // local
       if (less.removed) {
+        removedTs[less.cfi] = Math.max(less.removed, removedTs[less.cfi] || 0);
         preRemoved = less;
         continue;
       }
 
+      // remote
+      if (preRemoved?.cfi === less.cfi) {
+        if ((removedTs[less.cfi] || 0) > less.modified) {
+          continue;
+        }
+      }
+
+      // remote
       if (pre?.cfi === less.cfi) {
+        pre.modified = Math.max(pre.modified, less.modified);
         continue;
       }
 
-      if (preRemoved?.cfi === less.cfi) {
+      if ((removedTs[less.cfi] || 0) > less.modified) {
         continue;
       }
 

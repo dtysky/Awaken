@@ -50,7 +50,7 @@ export function Tools(props: IToolsProps) {
       const note = {
         cfi: cfi, start, end, page,
         text: range.toString(),
-        annotation: ''
+        annotation: '', modified: Date.now()
       };
       changeNote(props.notes, note, status, ENoteAction.Add);
       setNote(note);

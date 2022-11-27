@@ -80,7 +80,7 @@ export function Viewer(props: IViewerProps) {
       start: location.start.cfi,
       end: location.end.cfi,
       cfi: mergeCFI(location.start.cfi, location.end.cfi),
-      page: loc
+      page: loc, modified: Date.now()
     });
   }
 

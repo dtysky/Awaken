@@ -30,7 +30,9 @@ export interface IBookNote {
   text?: string;
   // default to ''
   annotation?: string;
-  removed?: boolean;
+  // timestamp
+  modified: number;
+  removed?: number;
 }
 
 export interface IBookConfig {
@@ -41,4 +43,6 @@ export interface IBookConfig {
   progress: number;
   bookmarks: IBookNote[];
   notes: IBookNote[];
+  // only remote
+  removedTs?: {[cfi: string]: number};
 }

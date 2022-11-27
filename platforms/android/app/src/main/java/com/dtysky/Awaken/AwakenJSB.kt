@@ -21,7 +21,6 @@ class AwakenJSB {
     private val mContext: MainActivity
     private val mAlertDialog: AlertDialog.Builder
     private val mBaseDir: Path
-    private val mHeaders: HashMap<String, String>
 
     constructor(context: MainActivity) {
         mContext = context
@@ -29,17 +28,6 @@ class AwakenJSB {
         createDir("", "Settings")
         createDir("", "Log")
         createDir("", "Books")
-
-        mHeaders = HashMap()
-        mHeaders["Connection"] = "close";
-        mHeaders["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        mHeaders["Pragma"] = "no-cache"
-        mHeaders["Expires"] = "0"
-        mHeaders["Access-Control-Allow-Origin"] = "*"
-        mHeaders["Access-Control-Allow-Methods"] = "GET, POST, DELETE, PUT, OPTIONS"
-        mHeaders["Access-Control-Max-Age"] = "600"
-        mHeaders["Access-Control-Allow-Credentials"] = "true"
-        mHeaders["Access-Control-Allow-Headers"] = "accept, authorization, Content-Type"
 
         mAlertDialog = AlertDialog.Builder(mContext)
         mAlertDialog.setPositiveButton("OK",
@@ -75,16 +63,25 @@ class AwakenJSB {
         method: String,
         params: Map<String, String>
     ): WebResourceResponse {
+        val headers = HashMap<String, String>()
+        headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        headers["Pragma"] = "no-cache"
+        headers["Expires"] = "0"
+        headers["Access-Control-Allow-Origin"] = "*"
+        headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, PUT, OPTIONS"
+        headers["Access-Control-Expose-Headers"] = "X-Error-Message, Content-Type"
+
         if (params.containsKey("base")) {
             try {
                 checkBase(params.getValue("base"));
             } catch (error: Exception) {
+                headers["X-Error-Message"] = error.message.toString()
                 return WebResourceResponse(
                     "application/json",
                     "utf-8",
                     200,
-                    error.message.toString(),
-                    mHeaders,
+                    "Error",
+                    headers,
                     ByteArrayInputStream(ByteArray(0))
                 )
             }
@@ -126,17 +123,18 @@ class AwakenJSB {
                 stream.close()
             }
 
+            headers["X-Error-Message"] = error.message.toString()
             return WebResourceResponse(
                 "application/json",
                 "utf-8",
                 200,
-                "${method}: ${error.message.toString()}",
-                mHeaders,
+                "Error",
+                headers,
                 ByteArrayInputStream(ByteArray(0))
             )
         }
 
-        return WebResourceResponse("", Charsets.UTF_8.toString(), 200, "OK", mHeaders, stream)
+        return WebResourceResponse("", Charsets.UTF_8.toString(), 200, "OK", headers, stream)
     }
 
     @JavascriptInterface
@@ -204,6 +202,18 @@ class AwakenJSB {
                 ValueCallback {  }
             )
         }
+    }
+
+    @JavascriptInterface
+    fun setBackground(r: Double, g: Double, b: Double) {
+        // unnecessary
+    }
+
+    fun onAppHide() {
+        mContext.mainWebView?.evaluateJavascript(
+            "window.Awaken_AppHideCB && window.Awaken_AppHideCB()",
+            ValueCallback {  }
+        )
     }
 
     private fun readTextFile(path: String, base: String): InputStream {

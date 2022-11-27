@@ -64,10 +64,6 @@ export function checkNoteMark(notes: IBookNote[], start: string, end: string): I
 
   for (let index = 0; index < notes.length; index += 1) {
     const {start: s, end: e, removed} = notes[index];
-    if (removed) {
-      continue;
-    }
-
     const cse = parser.compare(start, e);
     const ces = parser.compare(end, s);
 
@@ -76,7 +72,7 @@ export function checkNoteMark(notes: IBookNote[], start: string, end: string): I
     }
 
     if (cse <= 0) {
-      return {exist: true, index};
+      return {exist: removed ? false : true, index};
     }
   }
 
@@ -92,11 +88,17 @@ export function changeNote(
   action = action || (status.exist ? ENoteAction.Delete : ENoteAction.Add);
 
   if (action === ENoteAction.Add) {
-    notes.splice(status.index, 0, note);
+    if (status.index !== notes.length) {
+      notes.splice(status.index, 1, note);
+    } else {
+      notes.splice(status.index, 0, note);
+    }
     status.exist = true;
   } else if (action === ENoteAction.Delete) {
-    note.removed = true;
+    note.removed = Date.now();
     status.exist = false;
+  } else {
+    note.modified = Date.now();
   }
 
   return Object.assign({}, status);

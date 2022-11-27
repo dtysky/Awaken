@@ -72,15 +72,11 @@ export const worker: IWorker = {
     if (await worker.fs.exists('settings.json', 'Settings')) {
       const txt = await worker.fs.readFile('settings.json', 'utf8', 'Settings') as string;
       settings = JSON.parse(txt);
-      // settings.read.color = [0, 0, 0]
-      // settings.read.background = [255, 255, 255]
-      // settings.read.highlight = [102, 204, 153],
-      // await worker.fs.writeFile('settings.json', JSON.stringify(settings), 'Settings');
     } else {
       settings = {
         folder: 'unnecessary',
         webDav: {
-          url: 'http://192.168.2.204:8888/dav',
+          url: 'http://192.168.2.208:8888/dav',
           user: 'dtysky',
           password: '114514'
         },

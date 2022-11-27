@@ -36,8 +36,6 @@ class MainActivity : AppCompatActivity() {
         webView?.run {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.domStorageEnabled = true
-//            settings.allowContentAccess = true
-//            settings.allowFileAccess = true
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
@@ -106,6 +104,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        jsb?.onAppHide()
         mainWebView?.run {
             onPause()
             pauseTimers()
@@ -122,7 +121,6 @@ class MainActivity : AppCompatActivity() {
 
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-        window.setStatusBarColor(ContextCompat.getColor(this, R.color.bar))
 
         val decorView = window.decorView
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

@@ -1,4 +1,12 @@
 const webdav = require('webdav-server').v2;
+const fs = require('fs');
+const path = require('path');
+
+['./test/client/', './test/server/', './test/server/dav/'].forEach(p => {
+  if (!fs.existsSync(p)) {
+    fs.mkdirSync(p)
+  }
+});
 
 // User manager (tells who are the users)
 const userManager = new webdav.SimpleUserManager();
