@@ -8,7 +8,7 @@ import * as React from 'react';
 import ePub, {Contents} from 'epubjs';
 
 import bk from '../../backend';
-import {mergeCFI, IBookIndex} from './common';
+import {mergeCFI, IBookIndex, usePrevious} from './common';
 import {Tools} from './Tools';
 import {IBookNote} from '../../interfaces/protocols';
 import css from '../styles/reader.module.scss';
@@ -49,6 +49,7 @@ export interface IViewerProps {
   onLoad(
     indexes: IBookIndex[], pages: string[],
     jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
+    syncNotes: (preNotes: IBookNote[], notes: IBookNote[]) => void
   ): void;
   onBookmarkInfo(info: IBookNote): void;
   onProgress(progress: number): void;
@@ -132,7 +133,7 @@ export function Viewer(props: IViewerProps) {
               rendition.display(cfiOrPageOrIndex as string).then(() => {
                 // then, jump to note
                 rendition.display(cfiOrPageOrIndex as string);
-              })
+              });
               return;
             }
 
@@ -147,8 +148,17 @@ export function Viewer(props: IViewerProps) {
             }
           };
 
+          const syncNotes = (preNotes: IBookNote[], notes: IBookNote[]) => {
+            if (!rendition.annotations) {
+              return;
+            }
+
+            preNotes.forEach(note => rendition.annotations.remove(note.cfi, 'highlight'));
+            notes.forEach(note => rendition.annotations.add('highlight', note.cfi));
+          };
+
           rendition.display(rendition.book.locations.cfiFromLocation(0)).then(() => {
-            props.onLoad(indexes, pages, jump);
+            props.onLoad(indexes, pages, jump, syncNotes);
             setState('Ready');
           });
         });

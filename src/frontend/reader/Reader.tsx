@@ -11,7 +11,7 @@ import bk from '../../backend';
 import webdav from '../webdav';
 import {EJumpAction, Viewer} from './Viewer';
 import {IBook, IBookConfig, IBookNote, } from '../../interfaces/protocols';
-import {buildStyleUrl, changeNote, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
+import {buildStyleUrl, changeNote, checkNoteMark, IBookIndex, INoteMarkStatus, usePrevious} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
 import {Notes} from './Notes';
@@ -28,6 +28,7 @@ export interface IReaderProps {
 type TState = 'Init' | 'Loading' | 'Parser' | 'Ready';
 
 let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void;
+let syncNotes: (preNotes: IBookNote[], notes: IBookNote[]) => void;
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
   const [readSettings, setReadSettings] = React.useState<ISystemSettings['read']>();
@@ -90,11 +91,14 @@ export default function Reader(props: IReaderProps) {
                 bookmarkStatus={bookmarkStatus}
                 onReturn={() => {
                   bk.worker.onAppHide(() => {});
+                  syncNotes = undefined;
+                  jump = undefined;
                   props.onClose({ts: Date.now(), lastProgress: progress, progress, notes, bookmarks});
                 }}
                 onSync={async () => {
                   setLoadingInfo('同步中...');
                   const config = await webdav.syncBook(props.book, {ts, lastProgress, progress, notes, bookmarks});
+                  syncNotes(notes, config.notes);
                   setBookmarks(config.bookmarks);
                   setNotes(config.notes);
                   setLastProgress(config.lastProgress);
@@ -155,7 +159,7 @@ export default function Reader(props: IReaderProps) {
                 pages={pages}
                 bookmarks={bookmarks}
                 notes={notes}
-                onLoad={async (indexes, pgs, jumpTo) => {
+                onLoad={async (indexes, pgs, jumpTo, syncNotesX) => {
                   if (!pages) {
                     await webdav.savePages(props.book, pgs);
                   }
@@ -163,6 +167,7 @@ export default function Reader(props: IReaderProps) {
                   setCurrentIndex(indexes[0]);
                   setRange({start: 1, max: pgs.length});
                   jump = jumpTo;
+                  syncNotes = syncNotesX;
                   jump(EJumpAction.Page, progress);
 
                   if (lastProgress !== progress) {

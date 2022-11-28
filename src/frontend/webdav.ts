@@ -270,9 +270,9 @@ class WebDAV {
     const remote = JSON.parse(await this._client.getFileContents(`${book.hash}/config.json`, {format: 'text'}) as string);
     config = this._mergeConfig(config, remote);
     
-    const configStr = JSON.stringify(config);
-    await bk.worker.fs.writeFile(`${book.hash}/config.json`, configStr, 'Books');
-    await this._client.putFileContents(`${book.hash}/config.json`, configStr, {overwrite: true});
+    await bk.worker.fs.writeFile(`${book.hash}/config.json`, JSON.stringify(config), 'Books');
+    config.removedTs = remote.removedTs;
+    await this._client.putFileContents(`${book.hash}/config.json`, JSON.stringify(config), {overwrite: true});
 
     return config;
   }

@@ -4,9 +4,19 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/10/29 15:38:52
  */
+import {useRef, useEffect} from 'react';
 import {EpubCFI} from 'epubjs';
-import { ISystemSettings } from '../../interfaces';
+import {ISystemSettings} from '../../interfaces';
 import {IBookNote} from '../../interfaces/protocols';
+
+export function usePrevious<T>(value: T) {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+
+  return ref.current;
+}
 
 const parser = new EpubCFI() as any;
 
