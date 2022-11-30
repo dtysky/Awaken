@@ -88,6 +88,7 @@ export default function Reader(props: IReaderProps) {
           <>
             <div className={css.top}>
               <Menu
+                readSettings={readSettings}
                 bookmarkStatus={bookmarkStatus}
                 onReturn={() => {
                   bk.worker.onAppHide(() => {});

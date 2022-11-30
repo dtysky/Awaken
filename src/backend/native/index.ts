@@ -5,7 +5,7 @@
  * @Date   : 2022/11/20 23:11:56
  */
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
-import {ISystemSettings} from '../../interfaces';
+import {defaultThemes, ISystemSettings} from '../../interfaces';
 import {atob} from './utils';
 
 const jsb = window['Awaken'];
@@ -80,15 +80,13 @@ export const worker: IWorker = {
           user: 'dtysky',
           password: '114514'
         },
-        read: {
+        read: Object.assign({
+          theme: 0,
           font: '',
           fontSize: 16,
           lineSpace: 16,
-          color: [0, 0, 0],
-          background: [255, 255, 255],
-          highlight: [102, 204, 153],
           light: 1
-        }
+        }, defaultThemes[0])
       };
 
       await worker.fs.writeFile('settings.json', JSON.stringify(settings), 'Settings');

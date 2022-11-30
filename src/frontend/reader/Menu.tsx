@@ -9,8 +9,10 @@ import {ButtonGroup, Button, IconButton} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {INoteMarkStatus} from './common';
+import {IReadSettings} from '../../interfaces';
 
 interface IMenuProps {
+  readSettings: IReadSettings;
   bookmarkStatus?: INoteMarkStatus;
   onReturn(): void;
   onSync(): void;

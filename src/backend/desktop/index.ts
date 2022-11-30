@@ -6,7 +6,7 @@
  */
 import {fs, path, dialog} from '@tauri-apps/api'
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
-import {ISystemSettings} from '../../interfaces';
+import {defaultThemes, ISystemSettings} from '../../interfaces';
 
 let BOOKS_FOLDER: string;
 
@@ -33,6 +33,14 @@ export const worker: IWorker = {
       await fs.exists(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       const txt = await fs.readTextFile(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       settings = JSON.parse(txt);
+      settings.read = Object.assign({
+        theme: 0,
+        font: '',
+        fontSize: 16,
+        lineSpace: 16,
+        light: 1
+      }, defaultThemes[0]);
+      await fs.writeTextFile(SETTINGS_FP.fp, JSON.stringify(settings), {dir: SETTINGS_FP.base});
     } catch(error) {
       settings = {
         folder: '',
@@ -41,15 +49,13 @@ export const worker: IWorker = {
           user: '',
           password: ''
         },
-        read: {
+        read: Object.assign({
+          theme: 0,
           font: '',
           fontSize: 16,
           lineSpace: 16,
-          color: [0, 0, 0],
-          background: [255, 255, 255],
-          highlight: [102, 204, 153],
           light: 1
-        }
+        }, defaultThemes[0])
       };
 
       const dp = await path.appDir();
