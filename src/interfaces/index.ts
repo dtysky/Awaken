@@ -97,7 +97,7 @@ export const defaultThemes: ITheme[] = [
     highlight: '#66cc99',
   },
   {
-    name: '大地',
+    name: '土地',
     color: '#000000',
     background: '#fbf0d9',
     highlight: '#66cc99',
