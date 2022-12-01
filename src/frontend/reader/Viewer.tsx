@@ -72,6 +72,7 @@ export function Viewer(props: IViewerProps) {
   const [state, setState] = React.useState<TState>('Init');
   const [content, setContent] = React.useState<ePub.Contents>();
   const [noteCFI, setNoteCFI] = React.useState<string>('');
+  const [style, setStyle] = React.useState<string>();
 
   function updateProgress(location) {
     const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;
@@ -96,6 +97,7 @@ export function Viewer(props: IViewerProps) {
         stylesheet: props.bookStyle,
         allowScriptedContent: true
       } as any);
+      setStyle(props.bookStyle);
 
       book.loaded.navigation.then(nav => {
         const promise: Promise<string[]> = props.pages ?
@@ -179,6 +181,12 @@ export function Viewer(props: IViewerProps) {
       rendition.on('markClicked', (cfi: string) => {
         setNoteCFI(cfi);
       });
+    } else if (state === 'Ready') {
+      if (style !== props.bookStyle) {
+        rendition.themes.register('awaken-style', props.bookStyle);
+        rendition.themes.select('awaken-style');
+        setStyle(props.bookStyle);
+      }
     }
   });
 

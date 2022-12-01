@@ -4,6 +4,9 @@
 
 异常处理，超时等
 
+modal不准点击背景关闭，修改hana-ui提供新选项完成  
+hana-ui slider width不能放在didMount里算
+
 hack `book.locations.generate`，让其可以返回generate的进度，超级麻烦，有空再看吧
 
 自定义样式：

@@ -11,14 +11,14 @@ import bk from '../../backend';
 import webdav from '../webdav';
 import {EJumpAction, Viewer} from './Viewer';
 import {IBook, IBookConfig, IBookNote, } from '../../interfaces/protocols';
-import {buildStyleUrl, changeNote, checkNoteMark, IBookIndex, INoteMarkStatus, usePrevious} from './common';
+import {buildStyleUrl, changeNote, checkNoteMark, IBookIndex, INoteMarkStatus} from './common';
 import {Menu} from './Menu';
 import {Indexes} from './Indexes';
 import {Notes} from './Notes';
 import {PageCtr} from './PageCtr';
 
 import css from '../styles/reader.module.scss';
-import {ISystemSettings} from '../../interfaces';
+import {IReadSettings} from '../../interfaces';
 
 export interface IReaderProps {
   book: IBook;
@@ -31,7 +31,8 @@ let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex)
 let syncNotes: (preNotes: IBookNote[], notes: IBookNote[]) => void;
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
-  const [readSettings, setReadSettings] = React.useState<ISystemSettings['read']>();
+  const [readSettings, setReadSettings] = React.useState<IReadSettings>();
+  const [bookStyle, setBookStyle] = React.useState<string>();
   const [content, setContent] = React.useState<ArrayBuffer>();
   const [pages, setPages] = React.useState<string>();
   const [bookmarks, setBookmarks] = React.useState<IBookNote[]>([]);
@@ -53,14 +54,24 @@ export default function Reader(props: IReaderProps) {
     ts, lastProgress: progress, progress, notes, bookmarks
   });
 
+  const applyReadSettings = async (rSettings: IReadSettings) => {
+    const {background} = rSettings;
+    await bk.worker.setBackground(
+      parseInt(background.substring(1, 3), 16) / 255,
+      parseInt(background.substring(3, 5), 16) / 255, 
+      parseInt(background.substring(5, 7), 16) / 255
+    );
+    setBookStyle(buildStyleUrl(rSettings));
+    setReadSettings(rSettings);
+  }
+
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');
       setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`)
-      bk.worker.setBackground(251 / 255, 240 / 255, 217 / 255)
       
       bk.worker.loadSettings().then(settings => {
-        setReadSettings(settings.read);
+        applyReadSettings(settings.read);
         return webdav.loadBook(props.book);
       }).then(book => {
         setContent(book.content);
@@ -90,6 +101,14 @@ export default function Reader(props: IReaderProps) {
               <Menu
                 readSettings={readSettings}
                 bookmarkStatus={bookmarkStatus}
+                onUpdateSettings={async rSettings => {
+                  setLoadingInfo('阅读设置应用中...');
+                  const settings =  await bk.worker.loadSettings()
+                  settings.read = rSettings;
+                  await bk.worker.saveSettings(settings);
+                  await applyReadSettings(rSettings);
+                  setLoadingInfo('');
+                }}
                 onReturn={() => {
                   bk.worker.onAppHide(() => {});
                   syncNotes = undefined;
@@ -155,7 +174,7 @@ export default function Reader(props: IReaderProps) {
                 </Sidebar>
               </div>
               <Viewer
-                bookStyle={buildStyleUrl(readSettings)}
+                bookStyle={bookStyle}
                 content={content}
                 pages={pages}
                 bookmarks={bookmarks}

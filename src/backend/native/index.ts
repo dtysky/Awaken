@@ -83,8 +83,8 @@ export const worker: IWorker = {
         read: Object.assign({
           theme: 0,
           font: '',
-          fontSize: 16,
-          lineSpace: 16,
+          fontSize: 1,
+          lineSpace: 0.2,
           light: 1
         }, defaultThemes[0])
       };
