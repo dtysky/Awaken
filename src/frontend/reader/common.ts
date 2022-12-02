@@ -6,7 +6,7 @@
  */
 import {useRef, useEffect} from 'react';
 import {EpubCFI} from 'epubjs';
-import {ISystemSettings} from '../../interfaces';
+import {IReadSettings, ISystemSettings} from '../../interfaces';
 import {IBookNote} from '../../interfaces/protocols';
 
 export function usePrevious<T>(value: T) {
@@ -116,7 +116,7 @@ export function changeNote(
 
 let preHash: string = '';
 let preStyle: string;
-export function buildStyleUrl(settings: ISystemSettings['read']): string {
+export function buildStyleUrl(settings: IReadSettings): string {
   const hash = Object.keys(settings).map(key => settings[key]).join('|');
 
   if (hash === preHash) {
@@ -124,12 +124,20 @@ export function buildStyleUrl(settings: ISystemSettings['read']): string {
   }
 
   const style = `
+body {
+  color: ${settings.color};
+  font-size: ${settings.fontSize}rem;
+  line-height: ${settings.fontSize + settings.lineSpace}rem;
+}
+
 img {
   width: 100%;
 }
 
 a {
-  color: #6c9;
+  color: ${settings.color};
+  text-decoration: none;
+  border-bottom: 2px solid ${settings.highlight};
 }
   `
 

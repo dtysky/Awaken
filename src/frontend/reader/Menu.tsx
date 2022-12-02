@@ -24,7 +24,6 @@ interface IMenuProps {
 
 export function Menu(props: IMenuProps) {
   const [theme, setTheme] = React.useState<number>(0);
-  const [light, setLight] = React.useState<number>(1);
   const [fontSize, setFontSize] = React.useState<number>(16);
   const [lineSpace, setLineSpace] = React.useState<number>(16);
   const [showSettings, setShowSettings] = React.useState<boolean>(false);
@@ -44,7 +43,6 @@ export function Menu(props: IMenuProps) {
           type={'gear'}
           onClick={() => {
             setTheme(props.readSettings.theme);
-            setLight(props.readSettings.light);
             setFontSize(props.readSettings.fontSize);
             setLineSpace(props.readSettings.lineSpace);
             setShowSettings(true);
@@ -83,14 +81,13 @@ export function Menu(props: IMenuProps) {
         confirm={() => {
           props.onUpdateSettings({
             font: '',
-            theme, light, fontSize, lineSpace,
+            theme, fontSize, lineSpace,
             ...defaultThemes[theme]
           });
           setShowSettings(false);
         }}
         cancel={() => {
           setTheme(props.readSettings.theme);
-          setLight(props.readSettings.light);
           setFontSize(props.readSettings.fontSize);
           setLineSpace(props.readSettings.lineSpace);
           setShowSettings(false);
@@ -105,7 +102,8 @@ export function Menu(props: IMenuProps) {
             background: defaultThemes[theme].background,
             color: defaultThemes[theme].color,
             fontSize: `${fontSize}rem`,
-            lineHeight: `${fontSize + lineSpace}rem`
+            lineHeight: `${fontSize + lineSpace}rem`,
+            border: '1px solid #6c9'
           }}
         >
           <p>作为演员的时候，<br />我们<span style={{background: defaultThemes[theme].highlight}}>不可忘却愤怒</span>。</p>
@@ -140,22 +138,8 @@ export function Menu(props: IMenuProps) {
               color={'#6c9'}
               value={lineSpace}
               min={0}
-              max={4}
+              max={2}
               onChange={setLineSpace}
-            />
-          </FormItem>
-
-          <FormItem label="亮度" status='normal'>
-            <Slider
-              size='small'
-              style={{marginTop: '8px'}}
-              showValue={false}
-              icon={<Icon type='clover' color='#6c9' />}
-              color={'#6c9'}
-              value={light}
-              min={0}
-              max={1}
-              onChange={setLight}
             />
           </FormItem>
         </FormGroup>
@@ -171,15 +155,17 @@ export function Menu(props: IMenuProps) {
           }}
         >
           {
-            defaultThemes.map(t => (
+            defaultThemes.map((t, i) => (
               <div
                 key={t.name}
                 className={css.menuThemeItem}
                 style={{
                   background: t.background,
                   color: t.color,
-                  textDecorationColor: t.highlight
+                  textDecorationColor: t.highlight,
+                  borderColor: i === theme ? '#6c9' : '#ccc',
                 }}
+                onClick={() => setTheme(i)}
               >
                 {t.name}
               </div>

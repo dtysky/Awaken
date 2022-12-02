@@ -38,8 +38,7 @@ export const worker: IWorker = {
           theme: 0,
           font: '',
           fontSize: 1,
-          lineSpace: 0.2,
-          light: 1
+          lineSpace: 0.2
         }, defaultThemes[0]);
         await fs.writeTextFile(SETTINGS_FP.fp, JSON.stringify(settings), {dir: SETTINGS_FP.base});
       }
@@ -55,8 +54,7 @@ export const worker: IWorker = {
           theme: 0,
           font: '',
           fontSize: 1,
-          lineSpace: 0.2,
-          light: 1
+          lineSpace: 0.2
         }, defaultThemes[0])
       };
 

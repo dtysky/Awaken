@@ -46,6 +46,7 @@ export function PageCtr(props: IPageCtrProps) {
       <div className={css.pageCtrNext} onClick={props.onNext} />
       <div className={css.pageCtrSlider}>
         <Slider
+          style={{marginTop: 0}}
           size='small'
           icon={<Icon type='clover' color='#6c9' />}
           color={'#6c9'}

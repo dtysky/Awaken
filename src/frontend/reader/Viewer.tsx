@@ -111,10 +111,6 @@ export function Viewer(props: IViewerProps) {
             convertEPUBIndex(t, indexes);
           });
 
-          props.notes.forEach(note => {
-            rendition.annotations.add('highlight', note.cfi);
-          });
-
           const jump = (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => {
             if (action !== EJumpAction.Page) {
               rendition.on('relocated', updateProgress);
@@ -156,8 +152,10 @@ export function Viewer(props: IViewerProps) {
             }
 
             preNotes.forEach(note => rendition.annotations.remove(note.cfi, 'highlight'));
-            notes.forEach(note => rendition.annotations.add('highlight', note.cfi));
+            notes.forEach(note => rendition.annotations.add('highlight', note.cfi, undefined, undefined, 'awaken-highlight'));
           };
+
+          syncNotes([], props.notes);
 
           rendition.display(rendition.book.locations.cfiFromLocation(0)).then(() => {
             props.onLoad(indexes, pages, jump, syncNotes);

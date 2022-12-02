@@ -13,7 +13,6 @@ export interface ITheme {
 
 export interface IReadSettings extends ITheme {
   theme: number;
-  light: number;
   font: string;
   fontSize: number;
   lineSpace: number;
@@ -140,12 +139,6 @@ export const defaultThemes: ITheme[] = [
   },
   {
     name: '叹息',
-    color: '#000000',
-    background: '#fbf0d9',
-    highlight: '#66cc99',
-  },
-  {
-    name: '斜阳',
     color: '#000000',
     background: '#fbf0d9',
     highlight: '#66cc99',

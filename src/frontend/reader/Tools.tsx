@@ -45,7 +45,7 @@ export function Tools(props: IToolsProps) {
       setNote(note);
       setAnnotation(note.annotation);
     } else {
-      rendition.annotations.add('highlight', cfi);
+      rendition.annotations.add('highlight', cfi, undefined, undefined, 'awaken-highlight');
       const page = rendition.book.locations.locationFromCfi(cfi) as unknown as number;
       const note = {
         cfi: cfi, start, end, page,

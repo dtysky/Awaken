@@ -55,12 +55,14 @@ export default function Reader(props: IReaderProps) {
   });
 
   const applyReadSettings = async (rSettings: IReadSettings) => {
-    const {background} = rSettings;
+    const {background, highlight} = rSettings;
     await bk.worker.setBackground(
       parseInt(background.substring(1, 3), 16) / 255,
       parseInt(background.substring(3, 5), 16) / 255, 
       parseInt(background.substring(5, 7), 16) / 255
     );
+    const sheet = document.getElementById('global-style') as HTMLStyleElement;
+    sheet.textContent = `g.awaken-highlight {fill: ${highlight} !important;fill-opacity: 0.5;}`;
     setBookStyle(buildStyleUrl(rSettings));
     setReadSettings(rSettings);
   }
@@ -93,11 +95,18 @@ export default function Reader(props: IReaderProps) {
   });
 
   return (
-    <div className={css.reader} onBlur={saveConfig}>
+    <div
+      className={css.reader}
+      style={{background: readSettings?.background}}
+      onBlur={saveConfig}
+    >
       {
         state === 'Ready' && (
           <>
-            <div className={css.top}>
+            <div
+              className={css.top}
+              style={{color: readSettings?.color}}
+            >
               <Menu
                 readSettings={readSettings}
                 bookmarkStatus={bookmarkStatus}
