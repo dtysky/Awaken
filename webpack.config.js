@@ -58,10 +58,23 @@ module.exports = (env) => {
               loader: 'css-loader'
             },
             {
-              loader: 'postcss-loader'
+              loader: 'postcss-loader',
+              options: {
+                postcssOptions: {
+                  plugins: [
+                    ['postcss-preset-env'],
+                  ],
+                }
+              }
             },
             {
               loader: 'sass-loader'
+            },
+            {
+              loader: 'sass-resources-loader',
+              options: {
+                resources: './src/frontend/styles/awaken.hana-theme.scss'
+              }
             }
           ]
         },

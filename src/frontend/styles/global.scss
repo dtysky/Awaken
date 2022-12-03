@@ -19,27 +19,6 @@ html, body, #container {
     min-width: 340px !important;
     max-width: 520px;
     width: 80%;
-  }
-
-  .hana-loading {
-    color: #6c9;
-    border-color: #6c9;
-  }
-
-  .hana-menuitem-active {
-    color: #6c9 !important;
-    border-color: #6c9 !important;
-  }
-
-  .hana-submenu-title:hover {
-    color: #6c9 !important;
-  }
-
-  .hana-postcard:hover {
-    border-color: #6c9 !important;
-  }
-
-  .hana-text-area-input-focus, .hana-text-input-focus {
-    border-color: #6c9 !important;
+    user-select: none;
   }
 }

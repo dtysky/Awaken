@@ -81,6 +81,7 @@ export function Notes(props: INotesProps) {
 
       <Modal
         show={showModal}
+        closeOnClickBg={false}
         confirm={() => {
           const note = props.notes[noteIndex];
           note.annotation = annotation;

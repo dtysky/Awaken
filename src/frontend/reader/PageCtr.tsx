@@ -49,7 +49,6 @@ export function PageCtr(props: IPageCtrProps) {
           style={{marginTop: 0}}
           size='small'
           icon={<Icon type='clover' color='#6c9' />}
-          color={'#6c9'}
           showValue={false}
           value={props.current}
           min={props.start}

@@ -98,6 +98,7 @@ export function Tools(props: IToolsProps) {
 
         <Modal
           show={showModal}
+          closeOnClickBg={false}
           confirm={() => {
             note.annotation = annotation;
             changeNote(props.notes, note, status, ENoteAction.Update);

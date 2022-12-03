@@ -193,6 +193,7 @@ export default function App() {
 
       <Modal
         show={showModal}
+        closeOnClickBg={false}
         title={'是否连接到服务器？'}
         confirm={async () => {
           // need user's action to connect server

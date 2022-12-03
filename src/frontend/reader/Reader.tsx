@@ -252,6 +252,7 @@ export default function Reader(props: IReaderProps) {
 
       <Modal
         show={showJumpModal}
+        closeOnClickBg={false}
         confirm={() => {
           jump(EJumpAction.Page, lastProgress);
           setProgress(lastProgress);

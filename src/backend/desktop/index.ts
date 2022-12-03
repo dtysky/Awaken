@@ -33,15 +33,6 @@ export const worker: IWorker = {
       await fs.exists(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       const txt = await fs.readTextFile(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       settings = JSON.parse(txt);
-      if (settings.read.theme === undefined) {
-        settings.read = Object.assign({
-          theme: 0,
-          font: '',
-          fontSize: 1,
-          lineSpace: 0.2
-        }, defaultThemes[0]);
-        await fs.writeTextFile(SETTINGS_FP.fp, JSON.stringify(settings), {dir: SETTINGS_FP.base});
-      }
     } catch(error) {
       settings = {
         folder: '',

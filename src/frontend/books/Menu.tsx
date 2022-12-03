@@ -79,6 +79,7 @@ export function Menu(props: IMenuProps) {
       <Modal
         title={'设定'}
         show={showConfig}
+        closeOnClickBg={false}
         confirm={() => {
           const text: string[] = [];
 
@@ -171,6 +172,7 @@ export function Menu(props: IMenuProps) {
 
       <Modal
         show={showConfirm}
+        closeOnClickBg={false}
         title='请确认重要信息更新'
         confirm={() => {
           props.onUpdateSettings(settings);

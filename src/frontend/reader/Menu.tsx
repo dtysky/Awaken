@@ -32,13 +32,11 @@ export function Menu(props: IMenuProps) {
     <>
       <ButtonGroup className={css.menu}>
         <IconButton
-          //@ts-ignore
           className={css.menuItem}
           type={'backward'}
           onClick={props.onReturn}
         />
         <IconButton
-          //@ts-ignore
           className={css.menuItem}
           type={'gear'}
           onClick={() => {
@@ -49,25 +47,21 @@ export function Menu(props: IMenuProps) {
           }}
         />
         <IconButton
-          //@ts-ignore
           className={css.menuItem}
           type={'deploy'}
           onClick={props.onSync}
         />
         <IconButton
-          //@ts-ignore
           className={css.menuItem}
           type={'list'}
           onClick={props.onIndexes}
         />
         <IconButton
-          //@ts-ignore
           className={css.menuItem}
           type={'log'}
           onClick={props.onNotes}
         />
         <IconButton
-          //@ts-ignore
           className={css.menuItem}
           onClick={props.onBookmark}
           type={'paint'}
@@ -78,6 +72,7 @@ export function Menu(props: IMenuProps) {
 
       <Modal
         show={showSettings}
+        closeOnClickBg={false}
         confirm={() => {
           props.onUpdateSettings({
             font: '',
@@ -121,11 +116,10 @@ export function Menu(props: IMenuProps) {
               style={{marginTop: '8px'}}
               showValue={false}
               icon={<Icon type='clover' color='#6c9' />}
-              color={'#6c9'}
-              value={fontSize}
-              min={0.5}
-              max={4}
-              onChange={setFontSize}
+              value={fontSize * 10}
+              min={5}
+              max={40}
+              onChange={val => setFontSize(val / 10)}
             />
           </FormItem>
 
@@ -135,11 +129,10 @@ export function Menu(props: IMenuProps) {
               style={{marginTop: '8px'}}
               showValue={false}
               icon={<Icon type='clover' color='#6c9' />}
-              color={'#6c9'}
-              value={lineSpace}
+              value={lineSpace * 10}
               min={0}
-              max={2}
-              onChange={setLineSpace}
+              max={20}
+              onChange={val => setLineSpace(val / 10)}
             />
           </FormItem>
         </FormGroup>

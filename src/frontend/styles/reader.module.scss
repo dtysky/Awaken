@@ -37,7 +37,10 @@
   display: flex;
   justify-content: start;
   align-items: center;
-  font-size: 1.4rem;
+
+  .hana-icon {
+    font-size: 1.4rem;
+  }
 }
 
 .menuItem {
