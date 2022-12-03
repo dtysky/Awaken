@@ -27,7 +27,6 @@
 
 .bottom {
   position: relative;
-  width: 100%;
   height: calc(100% - 3rem - 2px);
 }
 
@@ -128,8 +127,9 @@
 .viewer {
   position: absolute;
   z-index: 1;
-  width: 100%;
-  height: 100%;
+  width: calc(100vw - 2rem);
+  margin-left: 1rem;
+  height: calc(100% - 1rem);
   left: 0; 
 }
 
@@ -141,7 +141,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 20%;
+  width: calc(1rem + 25px);
   height: 100%;
 }
 
@@ -150,16 +150,16 @@
   position: absolute;
   right: 0;
   top: 0;
-  width: 20%;
+  width: calc(1rem + 25px);
   height: 100%;
 }
 
 .pageCtrSlider {
   z-index: 3;
   position: absolute;
-  left: 5%;
-  bottom: 0.6em;
-  width: 90%;
+  left: 10%;
+  bottom: 1em;
+  width: 80%;
 }
 
 .tools {

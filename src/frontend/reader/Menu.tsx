@@ -34,11 +34,13 @@ export function Menu(props: IMenuProps) {
         <IconButton
           className={css.menuItem}
           type={'backward'}
+          color={props.readSettings?.color}
           onClick={props.onReturn}
         />
         <IconButton
           className={css.menuItem}
           type={'gear'}
+          color={props.readSettings?.color}
           onClick={() => {
             setTheme(props.readSettings.theme);
             setFontSize(props.readSettings.fontSize);
@@ -49,23 +51,26 @@ export function Menu(props: IMenuProps) {
         <IconButton
           className={css.menuItem}
           type={'deploy'}
+          color={props.readSettings?.color}
           onClick={props.onSync}
         />
         <IconButton
           className={css.menuItem}
           type={'list'}
+          color={props.readSettings?.color}
           onClick={props.onIndexes}
         />
         <IconButton
           className={css.menuItem}
           type={'log'}
+          color={props.readSettings?.color}
           onClick={props.onNotes}
         />
         <IconButton
           className={css.menuItem}
           onClick={props.onBookmark}
           type={'paint'}
-          iconStyle={{color: props.bookmarkStatus?.exist ? '#6c9' : 'black'}}
+          iconStyle={{color: props.bookmarkStatus?.exist ? props.readSettings?.highlight : props.readSettings?.color}}
           disabled={!props.bookmarkStatus}
         />
       </ButtonGroup>

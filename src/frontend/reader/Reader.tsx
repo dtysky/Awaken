@@ -224,6 +224,7 @@ export default function Reader(props: IReaderProps) {
               {
                 range && (
                   <PageCtr
+                    color={readSettings.highlight}
                     start={range.start}
                     max={range.max}
                     current={progress}

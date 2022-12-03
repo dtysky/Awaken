@@ -11,6 +11,7 @@ import css from '../styles/reader.module.scss';
 import {TBookType} from '../../interfaces/protocols';
 
 interface IPageCtrProps {
+  color: string;
   start: number;
   max: number;
   current: number;
@@ -48,7 +49,8 @@ export function PageCtr(props: IPageCtrProps) {
         <Slider
           style={{marginTop: 0}}
           size='small'
-          icon={<Icon type='clover' color='#6c9' />}
+          color={props.color}
+          icon={<Icon type='clover' color={props.color} />}
           showValue={false}
           value={props.current}
           min={props.start}
