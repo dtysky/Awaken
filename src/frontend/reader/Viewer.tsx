@@ -164,21 +164,24 @@ export function Viewer(props: IViewerProps) {
         });
       });
 
-      const addNote = async (cfiRange: string) => {
+      const selectNote = (cfiRange: string) => {
         setNoteCFI(cfiRange);
       }
 
-      rendition.on('locationChanged', () => {
-        console.log('locationChanged')
-        content?.off('selected', addNote);
+      rendition.on('rendered', () => {
         const c = rendition.getContents()[0];
-        c?.on('selected', addNote);
-        setContent(c);
+        c !== content && setContent(c);
       });
 
-      rendition.on('markClicked', (cfi: string) => {
-        setNoteCFI(cfi);
+      rendition.on('locationChanged', () => {
+        console.log('locationChanged')
+        content?.off('selected', selectNote);
+        const c = rendition.getContents()[0];
+        c?.on('selected', selectNote);
+        c !== content && setContent(c);
       });
+
+      rendition.on('markClicked', selectNote);
     } else if (state === 'Ready') {
       if (style !== props.bookStyle) {
         rendition.themes.register('awaken-style', props.bookStyle);
@@ -197,6 +200,7 @@ export function Viewer(props: IViewerProps) {
         content={content}
         cfi={noteCFI}
         onChangeNotes={notes => {
+          console.log('onChangeNotes')
           setNoteCFI('');
           props.onChangeNotes(notes);
         }}

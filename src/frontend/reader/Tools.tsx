@@ -30,7 +30,10 @@ export function Tools(props: IToolsProps) {
   const [y, setY] = React.useState<number>();
 
   React.useEffect(() => {
+    console.log(props.cfi, preCFI)
     if (!props.cfi || preCFI === props.cfi) {
+      preCFI = props.cfi;
+      console.log('after', preCFI)
       return;
     }
 
@@ -62,17 +65,22 @@ export function Tools(props: IToolsProps) {
 
     setX(x % cw + width / 2);
     setY(y + height / 2);
-    setShow(true);
+
+    setTimeout(() => setShow(true), 100);
   });
+
+  const handleClose = React.useCallback(e => {
+    e.preventDefault();
+    setShow(false);
+    props.onChangeNotes(props.notes);
+  }, []);
 
   return (
     <div
       className={css.tools}
       style={{display: show ? 'block' : 'none'}}
-      onClick={() => {
-        setShow(false);
-        props.onChangeNotes(props.notes);
-      }}
+      onMouseUp={handleClose}
+      onTouchEnd={handleClose}
     >
         <div
           className={css.toolsMenu}
