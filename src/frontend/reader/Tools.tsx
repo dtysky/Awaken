@@ -9,7 +9,7 @@ import {IconButton, Modal, TextArea} from 'hana-ui';
 
 import css from '../styles/reader.module.scss';
 import {changeNote, checkNoteMark, ENoteAction, INoteMarkStatus, splitCFI} from './common';
-import { IBookNote } from '../../interfaces/protocols';
+import {IBookNote} from '../../interfaces/protocols';
 
 interface IToolsProps {
   notes: IBookNote[];
@@ -48,15 +48,20 @@ export function Tools(props: IToolsProps) {
       setNote(note);
       setAnnotation(note.annotation);
     } else {
-      rendition.annotations.add('highlight', cfi, undefined, undefined, 'awaken-highlight');
-      const page = rendition.book.locations.locationFromCfi(cfi) as unknown as number;
-      const note = {
-        cfi: cfi, start, end, page,
-        text: range.toString(),
-        annotation: '', modified: Date.now()
-      };
-      changeNote(props.notes, note, status, ENoteAction.Add);
-      setNote(note);
+      try {
+        rendition.annotations.add('highlight', cfi, undefined, undefined, 'awaken-highlight');
+        const page = rendition.book.locations.locationFromCfi(cfi) as unknown as number;
+        const note = {
+          cfi: cfi, start, end, page,
+          text: range.toString(),
+          annotation: '', modified: Date.now()
+        };
+        changeNote(props.notes, note, status, ENoteAction.Add);
+        setNote(note);
+      } catch (error) {
+        console.error(error);
+        return;
+      }
     }
 
     preCFI = cfi;
@@ -79,9 +84,12 @@ export function Tools(props: IToolsProps) {
     <div
       className={css.tools}
       style={{display: show ? 'block' : 'none'}}
-      onMouseUp={handleClose}
-      onTouchEnd={handleClose}
     >
+        <div
+          className={css.toolsBg}
+          onMouseUp={handleClose}
+          onTouchEnd={handleClose}
+        />
         <div
           className={css.toolsMenu}
           style={{left: x, top: y}}
@@ -92,6 +100,7 @@ export function Tools(props: IToolsProps) {
               changeNote(props.notes, note, status, ENoteAction.Delete);
               props.rendition.annotations.remove(note.cfi, 'highlight');
               props.onChangeNotes(props.notes);
+              setShow(false);
             }}
           />
           <IconButton

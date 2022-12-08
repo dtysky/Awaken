@@ -22,3 +22,9 @@ html, body, #container {
     user-select: none;
   }
 }
+
+body {
+  user-select: none;
+  touch-action: none;
+  -webkit-touch-callout: none;
+}

@@ -57,6 +57,14 @@ window.Awaken = {
 """
         super.init()
 
+        do {
+            try createDir(path: "", base: "Settings")
+            try createDir(path: "", base: "Books")
+            try createDir(path: "", base: "Log")
+        } catch {
+            
+        }
+        
         mWKController.addUserScript(WKUserScript(source: initJS, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         mWKController.add(self, name: "showMessage")
         mWKController.add(self, name: "setBackground")

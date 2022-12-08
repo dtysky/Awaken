@@ -49,7 +49,9 @@ struct WebView: UIViewRepresentable {
         config.setURLSchemeHandler(AwakenXHRHandler(jsb: jsb), forURLScheme: "awaken")
 
         let wkWebView = WKWebView(frame: .zero, configuration: config)
-        wkWebView.scrollView.bounces = false;
+        wkWebView.scrollView.bounces = false
+        wkWebView.scrollView.alwaysBounceHorizontal = false
+        wkWebView.scrollView.alwaysBounceVertical = false
 
         let request = URLRequest(url: url)
         wkWebView.load(request)
