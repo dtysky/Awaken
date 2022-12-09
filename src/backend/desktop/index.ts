@@ -4,13 +4,16 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:11:56
  */
-import {fs, path, dialog} from '@tauri-apps/api'
+import {fs, path, dialog, http} from '@tauri-apps/api';
+import {proxy} from 'ajax-hook';
+
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {defaultThemes, ISystemSettings} from '../../interfaces';
+import {DAV_PREFIX} from '../common';
 
 let BOOKS_FOLDER: string;
 
-function processPath(fp: string, base: TBaseDir): {base: number, fp: string, dir: () => Promise<string>} {
+function processPath(fp: string, base: TBaseDir): {base: number, fp: string, dir: () => Promise<string>;} {
   switch (base) {
     case 'Settings':
       return {base: fs.BaseDirectory.App, fp, dir: path.appDir};
@@ -33,7 +36,7 @@ export const worker: IWorker = {
       await fs.exists(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       const txt = await fs.readTextFile(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       settings = JSON.parse(txt);
-    } catch(error) {
+    } catch (error) {
       settings = {
         folder: '',
         webDav: {
@@ -92,7 +95,7 @@ export const worker: IWorker = {
     await dialog.message(msg, {type, title});
   },
   async setBackground(r: number, g: number, b: number) {
-  
+
   },
   onAppHide(callback: () => void) {
 
@@ -109,7 +112,7 @@ export const worker: IWorker = {
       const {fp, base} = processPath(filePath, baseDir);
 
       return typeof content === 'string' ?
-        fs.writeTextFile(fp, content, base && {dir: base}):
+        fs.writeTextFile(fp, content, base && {dir: base}) :
         fs.writeBinaryFile(fp, content, base && {dir: base});
     },
     async removeFile(filePath: string, baseDir: TBaseDir) {
@@ -152,4 +155,33 @@ export const worker: IWorker = {
     }
   },
   logger: {} as any
+};
+
+// Make sure on client 'desktop'
+if (!window['Awaken']) {
+  proxy({
+    onRequest: (config, handler) => {
+      if (!config.url.startsWith(DAV_PREFIX)) {
+        return handler.next(config);
+      }
+
+      const url = config.url.replace(DAV_PREFIX, '');
+
+      http.fetch(url, {
+        method: config.method as any,
+        body: config.body ? (typeof config.body === 'string' ? http.Body.text(config.body) : http.Body.bytes(config.body)) : undefined,
+        headers: config.headers,
+        responseType: /(png|epub)$/.test(url) ? http.ResponseType.Binary : http.ResponseType.Text
+      }).then(res => {
+        handler.resolve({
+          config: config,
+          status: res.status,
+          headers: {},
+          response: res.data
+        });
+      }).catch(error => {
+        handler.reject(error);
+      });
+    }
+  });
 }

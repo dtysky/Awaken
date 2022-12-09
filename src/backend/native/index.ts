@@ -4,9 +4,12 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/11/20 23:11:56
  */
+import {proxy} from 'ajax-hook';
+
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {defaultThemes, ISystemSettings} from '../../interfaces';
 import {atob} from './utils';
+import {DAV_PREFIX} from '../common';
 
 const jsb = window['Awaken'];
 export const platform = jsb?.getPlatform() as 'ANDROID' | 'IOS';
@@ -42,7 +45,6 @@ async function callAPI<T extends keyof IResponse>(
     body: data
   });
 
-  // @todo: android
   const errorMessage = res.headers.get('X-Error-Message');
   if (errorMessage) {
     throw new Error(`${errorMessage}: ${method}(${JSON.stringify(params)}`);
@@ -63,8 +65,6 @@ async function callAPI<T extends keyof IResponse>(
   return undefined;
 }
 
-window['callAPI'] = callAPI;
-
 export const worker: IWorker = {
   loadSettings: async () => {
     let settings: ISystemSettings;
@@ -75,10 +75,15 @@ export const worker: IWorker = {
     } else {
       settings = {
         folder: 'unnecessary',
+        // webDav: {
+        //   url: 'http://192.168.2.208:8889/dav',
+        //   user: 'dtysky',
+        //   password: '114514'
+        // },
         webDav: {
-          url: 'http://192.168.2.208:8888/dav',
-          user: 'dtysky',
-          password: '114514'
+          url: 'https://dav.jianguoyun.com/dav/',
+          user: 'dtysky@outlook.com',
+          password: 'a8gdtnn8pgwknpp8'
         },
         read: Object.assign({
           theme: 0,
@@ -156,4 +161,37 @@ export const worker: IWorker = {
     }
   },
   logger: {} as any
+}
+
+if (!!jsb) {
+  proxy({
+    onRequest: (config, handler) => {
+      if (!config.url.startsWith(DAV_PREFIX)) {
+        return handler.next(config);
+      }
+
+      const url = config.url.replace(DAV_PREFIX, '');
+
+      fetch(`${API_PREFIX}/webdav?url=${encodeURIComponent(url)}`, {
+        method: config.method,
+        body: config.body,
+        headers: config.headers
+      }).then(res => {
+        console.log(url, res);
+
+        return (/(png|epub)$/.test(url) ? res.arrayBuffer() : res.text()).then(data => {
+          handler.resolve({
+            config: config,
+            status: res.status,
+            statusText: res.statusText,
+            headers: res.headers,
+            response: data
+          });
+        });
+      }).catch(error => {
+        console.error(error);
+        handler.reject(error);
+      });
+    }
+  });
 }

@@ -28,6 +28,11 @@
       },
       "path": {
         "all": true
+      },
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": ["https://**", "http://**"]
       }
     },
     "bundle": {

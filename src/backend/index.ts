@@ -7,6 +7,7 @@
 import {IWorker} from '../interfaces/IWorker';
 import {worker as dWorker} from '../backend/desktop';
 import {worker as nWorker, platform} from '../backend/native';
+import {DAV_PREFIX} from './common';
 
 // inject runtime
 const isNative = !!window['Awaken'];
@@ -14,8 +15,11 @@ const isNative = !!window['Awaken'];
 const exp: {
   worker: IWorker,
   supportChangeFolder: boolean,
-  supportAddDeleteBook: boolean
-} = {} as any;
+  supportAddDeleteBook: boolean,
+  davPrefix: string
+} = {
+  davPrefix: DAV_PREFIX
+} as any;
 
 if (isNative) {
   exp.worker = nWorker;

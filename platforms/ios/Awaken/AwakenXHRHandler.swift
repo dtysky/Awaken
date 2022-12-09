@@ -32,6 +32,38 @@ public class AwakenXHRHandler: NSObject, WKURLSchemeHandler {
         }
         let body = request.httpBody
         
+        if (method == "webdav") {
+            let url = URL(string: params["url"]!)! //change the url
+            let session = URLSession.shared
+            var req = URLRequest(url: url)
+            req.httpMethod = request.httpMethod
+            req.httpBody = body
+            req.allHTTPHeaderFields = request.allHTTPHeaderFields
+            let task = session.dataTask(with: req, completionHandler: {[weak self] data, response, error in
+                guard let strongSelf = self else { return }
+                if (error != nil) {
+                    strongSelf.postFailed(to: urlSchemeTask, error: error!)
+                } else if (data != nil) {
+                    var res = (response as! HTTPURLResponse)
+                    var headers: [String: String] = [
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow-Methods": "*",
+                        "Access-Control-Expose-Headers": "X-Error-Message, Content-Type, WWW-Authenticate"
+                    ]
+                    strongSelf.postResponse(to: urlSchemeTask, response: HTTPURLResponse(
+                        url: requestUrl, statusCode: res.statusCode,
+                        httpVersion: nil, headerFields: headers
+                    )!)
+                    strongSelf.postResponse(to: urlSchemeTask, data: data!)
+                }
+                
+                strongSelf.postFinished(to: urlSchemeTask)
+            })
+            
+            task.resume()
+            return
+        }
+        
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let strongSelf = self else { return }
             let res = strongSelf.jsb.callMethod(method: method, params: params, data: body)
@@ -100,7 +132,7 @@ public class AwakenXHRHandler: NSObject, WKURLSchemeHandler {
         post(to: urlSchemeTask, action: {urlSchemeTask.didFinish()})
     }
     
-    private func postFailed(to urlSchemeTask: WKURLSchemeTask, error: NSError) {
+    private func postFailed(to urlSchemeTask: WKURLSchemeTask, error: Error) {
         post(to: urlSchemeTask, action: {urlSchemeTask.didFailWithError(error)})
     }
     

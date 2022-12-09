@@ -4,7 +4,7 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/11/15 22:54:37
  */
-import {createClient, AuthType, WebDAVClient, FileStat} from 'webdav/web';
+import {createClient, WebDAVClient, FileStat} from 'webdav/web';
 import ePub, {EpubCFI} from 'epubjs';
 import * as md5 from 'js-md5';
 
@@ -22,10 +22,13 @@ export interface IBookContent {
 
 const parser = new EpubCFI() as any;
 
+function getRemote(fp: string) {
+  return `Awaken/${fp}`;
+}
+
 class WebDAV {
   private _client: WebDAVClient;
   private _folder: string;
-  private _hasBookIndexes: boolean = false;
   private _connectWarnShowed: boolean = false;
 
   get connected() {
@@ -34,19 +37,24 @@ class WebDAV {
 
   public async changeRemote(options: ISystemSettings['webDav']) {
     this._client = createClient(
-      options.url,
+      `${bk.davPrefix}${options.url}`,
       {
-        authType: AuthType.Digest,
         username: options.user,
         password: options.password
       }
     );
 
     try {
-      this._hasBookIndexes = await this._client.exists('books.json');
+      const hasBookIndexes = await this._client.exists('Awaken');
+      console.log(hasBookIndexes);
+      if (!hasBookIndexes) {
+        await this._client.createDirectory('Awaken');
+        await this._client.putFileContents(getRemote('books.json'), '[]');
+      }
     } catch (error) {
+      console.error(error)
       this._client = undefined;
-      bk.worker.showMessage('无法连接已保存的服务器，请检查', 'warning');
+      bk.worker.showMessage(`无法连接已保存的服务器，请检查`, 'warning');
     }
   }
 
@@ -94,10 +102,8 @@ class WebDAV {
     }
 
     let remoteBooks: IBook[] = [];
-    if (this._hasBookIndexes) {
-      const tmp = await this._client.getFileContents('books.json', {format: 'text'}) as string;
-      remoteBooks = JSON.parse(tmp);
-    }
+    const tmp = await this._client.getFileContents(getRemote('books.json'), {format: 'text'}) as string;
+    remoteBooks = JSON.parse(tmp);
     
     const localTable: {[hash: string]: IBook} = {};
     const remoteTable: {[hash: string]: IBook} = {};
@@ -138,7 +144,7 @@ class WebDAV {
           continue;
         }
 
-        const contents = await this._client.getDirectoryContents(book.hash) as FileStat[];
+        const contents = await this._client.getDirectoryContents(getRemote(book.hash)) as FileStat[];
         if (!(await fs.exists(book.hash, 'Books'))) {
           await fs.createDir(book.hash, 'Books');
         }
@@ -170,12 +176,12 @@ class WebDAV {
         for (const book of syncToRemoteBooks) {
           if (book.removed) {
             onUpdate(`删除远端书籍 ${book.name}...`);
-            await this._client.deleteFile(`${`${book.hash}/${book.name}.epub`}`);
+            await this._client.deleteFile(getRemote(`${book.hash}/${book.name}.epub`));
             continue;
           }
 
-          if (!(await this._client.exists(book.hash))) {
-            await this._client.createDirectory(book.hash);
+          if (!(await this._client.exists(getRemote(book.hash)))) {
+            await this._client.createDirectory(getRemote(book.hash));
           }
   
           for (const name of [`${book.name}.epub`, 'cover.png', 'config.json']) {
@@ -185,7 +191,7 @@ class WebDAV {
             }
 
             const data = await fs.readFile(fp, 'binary', 'Books');
-            await this._client.putFileContents(fp, data, {overwrite: name !== 'config.json', onUploadProgress: ({loaded, total}) => {
+            await this._client.putFileContents(getRemote(fp), data, {overwrite: name !== 'config.json', onUploadProgress: ({loaded, total}) => {
               onUpdate(`同步书籍 ${book.name} 的 ${name} 到远端：${~~(loaded / total * 100)}%`);
             }});
           }
@@ -193,7 +199,7 @@ class WebDAV {
     
         booksStr = JSON.stringify(books);
         await fs.writeFile('books.json', booksStr, 'Books');
-        await this._client.putFileContents('books.json', booksStr, {overwrite: true, onUploadProgress: ({loaded, total}) => {
+        await this._client.putFileContents(getRemote('books.json'), booksStr, {overwrite: true, onUploadProgress: ({loaded, total}) => {
           onUpdate(`同步目录到远端：${~~(loaded / total * 100)}%`);
         }});
         await fs.writeFile('books.json', booksStr, 'Books');
@@ -215,7 +221,7 @@ class WebDAV {
       return;
     }
 
-    const tmp = await this._client.getFileContents(fp, {format: 'binary', onDownloadProgress: ({loaded, total}) => {
+    const tmp = await this._client.getFileContents(getRemote(fp), {format: /json$/.test(filename) ? 'text' : 'binary', onDownloadProgress: ({loaded, total}) => {
       onUpdate?.(`拉取书籍 ${book.name} 的 ${filename} 到本地：${~~(loaded / total * 100)}%`);
     }});
     return await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
@@ -232,7 +238,7 @@ class WebDAV {
       await this._writeWithCheck(book, `${book.name}.epub`);
       return '';
     } catch (error) {
-      return `书籍未下载出错：${error.message || error}`;
+      return `书籍下载出错：${error.message || error}`;
     }
   }
   
@@ -267,12 +273,12 @@ class WebDAV {
       return config;
     }
 
-    const remote = JSON.parse(await this._client.getFileContents(`${book.hash}/config.json`, {format: 'text'}) as string);
+    const remote = JSON.parse(await this._client.getFileContents(getRemote(`${book.hash}/config.json`), {format: 'text'}) as string);
     config = this._mergeConfig(config, remote);
     
     await bk.worker.fs.writeFile(`${book.hash}/config.json`, JSON.stringify(config), 'Books');
     config.removedTs = remote.removedTs;
-    await this._client.putFileContents(`${book.hash}/config.json`, JSON.stringify(config), {overwrite: true});
+    await this._client.putFileContents(getRemote(`${book.hash}/config.json`), JSON.stringify(config), {overwrite: true});
 
     return config;
   }
