@@ -30,10 +30,8 @@ export function Tools(props: IToolsProps) {
   const [y, setY] = React.useState<number>();
 
   React.useEffect(() => {
-    console.log(props.cfi, preCFI)
     if (!props.cfi || preCFI === props.cfi) {
       preCFI = props.cfi;
-      console.log('after', preCFI)
       return;
     }
 

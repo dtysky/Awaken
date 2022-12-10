@@ -11,12 +11,20 @@ import android.view.WindowManager
 import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import java.io.ByteArrayInputStream
 
 
 class MainActivity : AppCompatActivity() {
     var mainWebView: WebView? = null
     private var jsb: AwakenJSB? = null
     private var selectFilesCallback: ((files: Array<String>) -> Unit)? = null
+    private val host: String = "http://192.168.2.208:8888"
+    private val headers: HashMap<String, String> = hashMapOf(
+        "Access-Control-Allow-Headers" to "*",
+        "Access-Control-Allow-Origin" to "*",
+        "Access-Control-Allow-Methods" to "*",
+        "Access-Control-Expose-Headers" to "DAV, Content-Type, Allow, WWW-Authenticate"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         var base = getExternalFilesDir(null)
         jsb = AwakenJSB(this)
         mainWebView?.addJavascriptInterface(jsb!!,"Awaken")
-        mainWebView?.loadUrl("http://192.168.2.208:8888")
+        mainWebView?.loadUrl(host)
     }
 
     private fun initWebViewSetting(webView: WebView?) {
@@ -46,16 +54,26 @@ class MainActivity : AppCompatActivity() {
             webViewClient = object: WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                     request?.run {
+                        if (request.method == "OPTIONS") {
+                            return WebResourceResponse(
+                                "", Charsets.UTF_8.toString(), 200, "OK",
+                                headers, ByteArrayInputStream(ByteArray(0))
+                            )
+                        }
+
                         if (url.host.equals("awaken.api")) {
                             var method: String = url.path.toString().substring(1)
-                            var params: MutableMap<String, String> = mutableMapOf()
+                            var params: MutableMap<String, String> = mutableMapOf(
+                                "method" to request.method
+                            )
                             url.queryParameterNames.forEach {
-                                params.put(it, url.getQueryParameter(it).toString())
+                                params[it] = url.getQueryParameter(it).toString()
                             }
 
-                            return jsb!!.callMethod(method, params)
+                            return jsb!!.callMethod(method, params, requestHeaders)
                         }
                     }
+
                     return super.shouldInterceptRequest(view, request)
                 }
             }

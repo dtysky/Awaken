@@ -75,15 +75,10 @@ export const worker: IWorker = {
     } else {
       settings = {
         folder: 'unnecessary',
-        // webDav: {
-        //   url: 'http://192.168.2.208:8889/dav',
-        //   user: 'dtysky',
-        //   password: '114514'
-        // },
         webDav: {
-          url: 'https://dav.jianguoyun.com/dav/',
-          user: 'dtysky@outlook.com',
-          password: 'a8gdtnn8pgwknpp8'
+          url: 'http://192.168.2.208:8889/dav',
+          user: 'dtysky',
+          password: '114514'
         },
         read: Object.assign({
           theme: 0,
@@ -172,12 +167,21 @@ if (!!jsb) {
 
       const url = config.url.replace(DAV_PREFIX, '');
 
+      if (config.body && platform === 'ANDROID') {
+        const isBase64 = typeof config.body !== 'string';
+        const data: string = isBase64 ? atob(config.body as ArrayBuffer) : config.body;
+        jsb.setWebdavRequestBody(url, config.method, data, isBase64);
+      }
+
       fetch(`${API_PREFIX}/webdav?url=${encodeURIComponent(url)}`, {
         method: config.method,
         body: config.body,
         headers: config.headers
       }).then(res => {
-        console.log(url, res);
+        const errorMessage = res.headers.get('X-Error-Message');
+        if (errorMessage) {
+          throw new Error(`${errorMessage}: webdav(${url})`);
+        }
 
         return (/(png|epub)$/.test(url) ? res.arrayBuffer() : res.text()).then(data => {
           handler.resolve({

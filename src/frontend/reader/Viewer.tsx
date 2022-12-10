@@ -174,7 +174,6 @@ export function Viewer(props: IViewerProps) {
       });
 
       rendition.on('locationChanged', () => {
-        console.log('locationChanged')
         content?.off('selected', selectNote);
         const c = rendition.getContents()[0];
         c?.on('selected', selectNote);
@@ -200,7 +199,6 @@ export function Viewer(props: IViewerProps) {
         content={content}
         cfi={noteCFI}
         onChangeNotes={notes => {
-          console.log('onChangeNotes')
           setNoteCFI('');
           props.onChangeNotes(notes);
         }}

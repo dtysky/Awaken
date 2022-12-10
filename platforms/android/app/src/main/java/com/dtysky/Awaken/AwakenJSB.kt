@@ -8,19 +8,21 @@ import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebResourceResponse
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
-import kotlin.collections.HashMap
 
+val client = okhttp3.OkHttpClient()
 
 class AwakenJSB {
     private val mContext: MainActivity
     private val mAlertDialog: AlertDialog.Builder
     private val mBaseDir: Path
+    private var mWebdavRequestCache: HashMap<String, Pair<String, Boolean>> = hashMapOf()
 
     constructor(context: MainActivity) {
         mContext = context
@@ -61,15 +63,16 @@ class AwakenJSB {
 
     fun callMethod(
         method: String,
-        params: Map<String, String>
+        params: Map<String, String>,
+        origHeaders: Map<String, String>
     ): WebResourceResponse {
         val headers = HashMap<String, String>()
         headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         headers["Pragma"] = "no-cache"
         headers["Expires"] = "0"
         headers["Access-Control-Allow-Origin"] = "*"
-        headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, PUT, OPTIONS"
-        headers["Access-Control-Expose-Headers"] = "X-Error-Message, Content-Type"
+        headers["Access-Control-Allow-Methods"] = "*"
+        headers["Access-Control-Expose-Headers"] = "X-Error-Message, Content-Type, WWW-Authenticate"
 
         if (params.containsKey("base")) {
             try {
@@ -87,8 +90,9 @@ class AwakenJSB {
             }
         }
 
-        var stream: InputStream? = null;
-        var text: String = "";
+        var stream: InputStream? = null
+        var text: String = ""
+        var response: okhttp3.Response? = null
 
         try {
             when (method) {
@@ -113,15 +117,20 @@ class AwakenJSB {
                 "exists" -> {
                     text = exists(params.getValue("filePath"), params.getValue("base"))
                 }
+                "webdav" -> {
+                    response = webdav(params.getValue("url"), params.getValue("method"), origHeaders)
+                }
+            }
+
+            if (response != null) {
+                stream = response.body.byteStream()
             }
 
             if (stream == null) {
                 stream = ByteArrayInputStream(text.toByteArray())
             }
         } catch (error: Exception) {
-            if (stream != null) {
-                stream.close()
-            }
+            stream?.close()
 
             headers["X-Error-Message"] = error.message.toString()
             return WebResourceResponse(
@@ -131,6 +140,17 @@ class AwakenJSB {
                 "Error",
                 headers,
                 ByteArrayInputStream(ByteArray(0))
+            )
+        }
+
+        if (response != null) {
+            if (!response.isSuccessful) {
+                headers["X-Error-Message"] = response.message
+            }
+            return WebResourceResponse(
+                "", Charsets.UTF_8.toString(), response.code,
+                if (response.message == "") { "OK" } else { response.message },
+                headers, stream
             )
         }
 
@@ -209,6 +229,11 @@ class AwakenJSB {
         // unnecessary
     }
 
+    @JavascriptInterface
+    fun setWebdavRequestBody(url: String, method: String, body: String, isBase64: Boolean) {
+        mWebdavRequestCache[method+url] = Pair(body, isBase64)
+    }
+
     fun onAppHide() {
         mContext.mainWebView?.evaluateJavascript(
             "window.Awaken_AppHideCB && window.Awaken_AppHideCB()",
@@ -263,6 +288,29 @@ class AwakenJSB {
 
     private fun exists(path: String, base: String): String {
         return if (getFile(path, base).exists()) "true" else "false"
+    }
+
+    private fun webdav(url: String, method: String, headers: Map<String, String>): okhttp3.Response {
+        val request = okhttp3.Request.Builder().url(url)
+        val cache = mWebdavRequestCache[method+url]
+
+        if (cache == null) {
+            request.method(method, null)
+        } else {
+            if (cache.second) {
+                request.method(method, Base64.decode(cache.first, Base64.DEFAULT).toRequestBody())
+            } else {
+                request.method(method, cache.first.toRequestBody())
+            }
+
+            mWebdavRequestCache.remove(method+url)
+        }
+
+        headers.forEach {
+            request.addHeader(it.key, it.value)
+        }
+
+        return client.newCall(request.build()).execute()
     }
 
     private fun checkBase(base: String?) {
