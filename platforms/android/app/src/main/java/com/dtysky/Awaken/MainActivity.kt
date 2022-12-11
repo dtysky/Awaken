@@ -3,7 +3,6 @@ package com.dtysky.Awaken
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -34,10 +33,9 @@ class MainActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(true)
         mainWebView = findViewById(R.id.main)
         initWebViewSetting(mainWebView)
-        var base = getExternalFilesDir(null)
         jsb = AwakenJSB(this)
         mainWebView?.addJavascriptInterface(jsb!!,"Awaken")
-        mainWebView?.loadUrl(host)
+        mainWebView?.loadUrl(if (BuildConfig.DEBUG) { host } else { "http://awaken.api" })
     }
 
     private fun initWebViewSetting(webView: WebView?) {
@@ -48,7 +46,7 @@ class MainActivity : AppCompatActivity() {
             settings.loadWithOverviewMode = true
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             settings.javaScriptEnabled = true
-            settings.javaScriptCanOpenWindowsAutomatically = true
+            settings.javaScriptCanOpenWindowsAutomatically = BuildConfig.DEBUG
             settings.setSupportMultipleWindows(true)
 
             webViewClient = object: WebViewClient() {
@@ -100,8 +98,6 @@ class MainActivity : AppCompatActivity() {
                 selectFilesCallback?.invoke(arrayOf())
             } else {
                 resultData?.data?.also {uri ->
-                    // Perform operations on the document using its URI.
-                    Log.d("Awaken", uri.toString())
                     selectFilesCallback?.invoke(arrayOf(uri.toString()))
                 }
             }

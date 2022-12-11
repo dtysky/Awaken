@@ -31,6 +31,4 @@ server.afterRequest((arg, next) => {
   next();
 });
 
-server.start((s) => {
-  console.log('Server started on port ' + s.address().port + '.');
-});
+module.exports = server;

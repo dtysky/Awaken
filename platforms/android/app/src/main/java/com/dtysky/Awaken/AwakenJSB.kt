@@ -120,6 +120,9 @@ class AwakenJSB {
                 "webdav" -> {
                     response = webdav(params.getValue("url"), params.getValue("method"), origHeaders)
                 }
+                else -> {
+                    stream = loadAsset(method)
+                }
             }
 
             if (response != null) {
@@ -311,6 +314,10 @@ class AwakenJSB {
         }
 
         return client.newCall(request.build()).execute()
+    }
+
+    private fun loadAsset(url: String): InputStream {
+        return mContext.assets.open(if (url == "") { "index.html" } else { url })
     }
 
     private fun checkBase(base: String?) {

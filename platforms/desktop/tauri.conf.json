@@ -6,7 +6,7 @@
   },
   "package": {
     "productName": "Awaken",
-    "version": "0.8.0"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -77,10 +77,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "width": 800,
+        "height": 1000,
         "resizable": true,
-        "title": "Awaken",
-        "width": 800
+        "title": "Awaken - 认知构建自由"
       }
     ]
   }

@@ -1,14 +1,32 @@
 const path = require('path');
+const fs = require('fs');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
+const davServer = require('./webdav.server');
+
+function syncVersions() {
+  const version = JSON.parse(fs.readFileSync('./package.json', 'utf-8')).version;
+  let tmp = JSON.parse(fs.readFileSync('./platforms/desktop/tauri.conf.json', 'utf-8')).package.version;
+  tmp.version = version;
+  fs.writeFileSync('./platforms/desktop/tauri.conf.json', JSON.stringify(tmp, undefined, 2), 'utf-8');
+}
+
 module.exports = (env) => {
-  const platform = env.plat || 'desktop';
+  const isProd = !!env.production;
+
+  if (!isProd) {
+    davServer.start((s) => {
+      console.log('Dav server started on port ' + s.address().port + '.');
+    });
+  } else {
+    syncVersions();
+  }
 
   return {
-    devtool: 'source-map',
-    mode: 'development',
+    devtool: !isProd ? 'source-map' : false,
+    mode: isProd ? 'production' : 'development',
     stats: {
       warnings:false
     },
@@ -20,7 +38,7 @@ module.exports = (env) => {
     },
   
     output: {
-      path: path.resolve(__dirname, 'platforms', platform, './assets'),
+      path: path.resolve(__dirname, 'dist'),
       filename: 'main.[hash].js',
       publicPath: '/'
     },
@@ -86,8 +104,8 @@ module.exports = (env) => {
       new HtmlWebpackPlugin({
         template: path.resolve(__dirname, './index.html')
       }),
-      new webpack.HotModuleReplacementPlugin()
-    ],
+      !isProd && new webpack.HotModuleReplacementPlugin()
+    ].filter(item => !!item),
 
     devServer: {
       host: '0.0.0.0',
@@ -95,11 +113,6 @@ module.exports = (env) => {
       hot: true,
       client: {
         overlay: false,
-      },
-      proxy: {
-        '/dav': {
-          target: 'http://127.0.0.1:8889'
-        }
       }
     }
   };
