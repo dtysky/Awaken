@@ -15,6 +15,7 @@ export interface IReadSettings extends ITheme {
   theme: number;
   font: string;
   fontSize: number;
+  letterSpace: number;
   lineSpace: number;
 }
 

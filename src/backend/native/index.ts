@@ -84,6 +84,7 @@ export const worker: IWorker = {
           theme: 0,
           font: '',
           fontSize: 1,
+          letterSpace: 0,
           lineSpace: 0.2
         }, defaultThemes[0])
       };

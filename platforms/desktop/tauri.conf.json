@@ -77,10 +77,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "width": 800,
+        "width": 750,
         "height": 1000,
         "resizable": true,
-        "title": "Awaken - 认知构建自由"
+        "title": "Awaken"
       }
     ]
   }

@@ -104,6 +104,11 @@ module.exports = (env) => {
       new HtmlWebpackPlugin({
         template: path.resolve(__dirname, './index.html')
       }),
+      new webpack.DefinePlugin({
+        'process.env': {
+          isProd
+        }
+      }),
       !isProd && new webpack.HotModuleReplacementPlugin()
     ].filter(item => !!item),
 

@@ -128,6 +128,7 @@ body {
   color: ${settings.color};
   font-size: ${settings.fontSize}rem;
   line-height: ${settings.fontSize + settings.lineSpace}rem;
+  letter-spacing: ${settings.letterSpace || 0}rem;
   touch-action: none;
   -webkit-touch-callout: none;
 }

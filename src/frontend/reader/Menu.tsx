@@ -24,8 +24,9 @@ interface IMenuProps {
 
 export function Menu(props: IMenuProps) {
   const [theme, setTheme] = React.useState<number>(0);
-  const [fontSize, setFontSize] = React.useState<number>(16);
-  const [lineSpace, setLineSpace] = React.useState<number>(16);
+  const [fontSize, setFontSize] = React.useState<number>(1);
+  const [letterSpace, setLetterSpace] = React.useState<number>(0.2);
+  const [lineSpace, setLineSpace] = React.useState<number>(0);
   const [showSettings, setShowSettings] = React.useState<boolean>(false);
 
   return (
@@ -44,6 +45,7 @@ export function Menu(props: IMenuProps) {
           onClick={() => {
             setTheme(props.readSettings.theme);
             setFontSize(props.readSettings.fontSize);
+            setLetterSpace(props.readSettings.letterSpace || 0);
             setLineSpace(props.readSettings.lineSpace);
             setShowSettings(true);
           }}
@@ -81,7 +83,7 @@ export function Menu(props: IMenuProps) {
         confirm={() => {
           props.onUpdateSettings({
             font: '',
-            theme, fontSize, lineSpace,
+            theme, fontSize, letterSpace, lineSpace,
             ...defaultThemes[theme]
           });
           setShowSettings(false);
@@ -127,7 +129,18 @@ export function Menu(props: IMenuProps) {
               onChange={val => setFontSize(val / 10)}
             />
           </FormItem>
-
+          <FormItem label="字间距" status='normal'>
+            <Slider
+              size='small'
+              style={{marginTop: '8px'}}
+              showValue={false}
+              icon={<Icon type='clover' color='#6c9' />}
+              value={lineSpace * 10}
+              min={0}
+              max={10}
+              onChange={val => setLetterSpace(val / 10)}
+            />
+          </FormItem>
           <FormItem label="行间距" status='normal'>
             <Slider
               size='small'

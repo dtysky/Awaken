@@ -9,12 +9,10 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import java.io.ByteArrayInputStream
 
-
 class MainActivity : AppCompatActivity() {
-    var mainWebView: WebView? = null
+    var mainWebView: AwakenWebView? = null
     private var jsb: AwakenJSB? = null
     private var selectFilesCallback: ((files: Array<String>) -> Unit)? = null
     private val host: String = "http://192.168.2.208:8888"

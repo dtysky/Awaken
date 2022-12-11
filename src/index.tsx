@@ -10,6 +10,10 @@ import App from './frontend/App';
 
 import 'hana-ui/hana-style.scss';
 
+if (process.env.isProd) {
+  document.body.oncontextmenu = () => false;
+}
+
 const container = document.getElementById('container');
 const root = createRoot(container);
 root.render(<App />);

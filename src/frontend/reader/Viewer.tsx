@@ -171,6 +171,9 @@ export function Viewer(props: IViewerProps) {
       rendition.on('rendered', () => {
         const c = rendition.getContents()[0];
         c !== content && setContent(c);
+        if (process.env.isProd) {
+          c.document.body.oncontextmenu = () => false
+        }
       });
 
       rendition.on('locationChanged', () => {
