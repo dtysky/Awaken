@@ -8,6 +8,8 @@
 import SwiftUI
 import WebKit
 
+let host: String = "http://192.168.2.204:8888"
+
 struct ContentView: View {
     @State var bgColor: CGColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     
@@ -18,7 +20,6 @@ struct ContentView: View {
                 .background(Color.red)
                 .edgesIgnoringSafeArea(.all)
             WebView(
-                url: URL(string: "http://192.168.2.204:8888")!,
                 onChangeBg: changeBgColor
             )
         }
@@ -30,7 +31,6 @@ struct ContentView: View {
 }
 
 struct WebView: UIViewRepresentable {
-    var url: URL
     var onChangeBg: (_ color: CGColor) -> ()
 
     func makeUIView(context: Context) -> WKWebView {
@@ -53,8 +53,18 @@ struct WebView: UIViewRepresentable {
         wkWebView.scrollView.alwaysBounceHorizontal = false
         wkWebView.scrollView.alwaysBounceVertical = false
 
-        let request = URLRequest(url: url)
+        #if RELEASE
+        let rp = Bundle.main.path(forResource: "index", ofType: "html", inDirectory: "assets")!
+        do {
+            let str = try String(contentsOfFile: rp, encoding: .utf8)
+            wkWebView.loadHTMLString(str, baseURL: URL(string: "awaken://awaken.api")!)
+        } catch {
+            wkWebView.load(URLRequest(url: URL(string: host)!))
+        }
+        #else
+        let request = URLRequest(url: URL(string: host)!)
         wkWebView.load(request)
+        #endif
         
         jsb.setWebview(webview: wkWebView)
 

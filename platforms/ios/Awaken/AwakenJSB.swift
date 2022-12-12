@@ -124,7 +124,7 @@ window.Awaken = {
                     case "exists":
                         res.text = try exists(path: params["filePath"]!, base: params["base"]!)
                     default:
-                        res.error = "\(method): invalid method"
+                        res.file = try loadAsset(url: method)
                 }
             } catch {
                 do {
@@ -235,6 +235,19 @@ window.Awaken = {
 
     private func exists(path: String, base: String) throws -> String {
         return mFileManager.fileExists(atPath: getPath(path: path, base: base).path) ? "true" : "false"
+    }
+    
+    private func loadAsset(url: String) throws -> FileHandle {
+        let fp = url == "" ? "index.html" : url
+        let nameExt = fp.components(separatedBy: ".")
+        let rp = Bundle.main.path(forResource: nameExt[0], ofType: nameExt[1], inDirectory: "assets")
+        let file = FileHandle(forReadingAtPath: rp!)
+        
+        if (file == nil) {
+            throw "File load error: \(url)"
+        }
+        
+        return file!
     }
 
     private func checkBase(base: String?) -> Bool {

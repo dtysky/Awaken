@@ -41,11 +41,7 @@ export async function loadBooks() {
 }
 
 export async function fillBookCover(book: IBook) {
-  if (await bk.worker.fs.exists(`${book.hash}/cover.png`, 'Books')) {
-    const content = await bk.worker.fs.readFile(`${book.hash}/cover.png`, 'binary', 'Books') as ArrayBuffer;
-    const url = URL.createObjectURL(new Blob([content]));
-    book.cover = url;
-  }
+  book.cover = await bk.worker.getCoverUrl(book);
 }
 
 export async function selectFolder(requireRes: boolean): Promise<string> {

@@ -13,6 +13,7 @@
 		9841F841292F7CAD00EF1724 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9841F840292F7CAD00EF1724 /* Preview Assets.xcassets */; };
 		9841F848292F7F2600EF1724 /* AwakenXHRHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9841F847292F7F2600EF1724 /* AwakenXHRHandler.swift */; };
 		9841F84A292F99F000EF1724 /* AwakenJSB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9841F849292F99F000EF1724 /* AwakenJSB.swift */; };
+		98D797E52946FA7000F8FC4C /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 98D797E42946FA7000F8FC4C /* assets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +24,7 @@
 		9841F840292F7CAD00EF1724 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		9841F847292F7F2600EF1724 /* AwakenXHRHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AwakenXHRHandler.swift; sourceTree = "<group>"; };
 		9841F849292F99F000EF1724 /* AwakenJSB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AwakenJSB.swift; sourceTree = "<group>"; };
+		98D797E42946FA7000F8FC4C /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +63,7 @@
 				9841F83F292F7CAD00EF1724 /* Preview Content */,
 				9841F847292F7F2600EF1724 /* AwakenXHRHandler.swift */,
 				9841F849292F99F000EF1724 /* AwakenJSB.swift */,
+				98D797E42946FA7000F8FC4C /* assets */,
 			);
 			path = Awaken;
 			sourceTree = "<group>";
@@ -131,6 +134,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				98D797E52946FA7000F8FC4C /* assets in Resources */,
 				9841F841292F7CAD00EF1724 /* Preview Assets.xcassets in Resources */,
 				9841F83E292F7CAD00EF1724 /* Assets.xcassets in Resources */,
 			);
@@ -288,6 +292,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				"OTHER_SWIFT_FLAGS[arch=*]" = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.dtysky.Awaken;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -317,6 +322,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				"OTHER_SWIFT_FLAGS[arch=*]" = "-DRELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.dtysky.Awaken;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

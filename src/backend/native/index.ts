@@ -10,6 +10,7 @@ import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {defaultThemes, ISystemSettings} from '../../interfaces';
 import {atob} from './utils';
 import {DAV_PREFIX} from '../common';
+import {IBook} from '../../interfaces/protocols';
 
 const jsb = window['Awaken'];
 export const platform = jsb?.getPlatform() as 'ANDROID' | 'IOS';
@@ -119,6 +120,9 @@ export const worker: IWorker = {
   },
   onAppHide(callback: () => void) {
     window['Awaken_AppHideCB'] = callback;
+  },
+  async getCoverUrl(book: IBook): Promise<string> {
+    return `${API_PREFIX}/readBinaryFile?filePath=${book.hash}/cover.png&base=Books`;
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', base: TBaseDir) {

@@ -10,6 +10,7 @@ import {proxy} from 'ajax-hook';
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {defaultThemes, ISystemSettings} from '../../interfaces';
 import {DAV_PREFIX} from '../common';
+import {IBook} from '../../interfaces/protocols';
 
 let BOOKS_FOLDER: string;
 
@@ -100,6 +101,14 @@ export const worker: IWorker = {
   },
   onAppHide(callback: () => void) {
 
+  },
+  async getCoverUrl(book: IBook): Promise<string> {
+    if (!(await worker.fs.exists(`${book.hash}/cover.png`, 'Books'))) {
+      return '';
+    }
+
+    const content = await worker.fs.readFile(`${book.hash}/cover.png`, 'binary', 'Books') as ArrayBuffer;
+    return URL.createObjectURL(new Blob([content]));
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {

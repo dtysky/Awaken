@@ -5,6 +5,7 @@
  * @Date   : 2022/9/13 23:11:02
  */
 import {ISystemSettings} from './index';
+import {IBook} from './protocols';
 
 export interface ILogger {
   info(...args: any): void;
@@ -35,4 +36,5 @@ export interface IWorker {
   showMessage(msg: string, type: TToastType, title?: string): Promise<void>;
   setBackground(r: number, g: number, b: number): Promise<void>;
   onAppHide(callback: () => void): void;
+  getCoverUrl(book: IBook): Promise<string>;
 }

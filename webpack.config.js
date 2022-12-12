@@ -8,8 +8,8 @@ const davServer = require('./webdav.server');
 
 function syncVersions() {
   const version = JSON.parse(fs.readFileSync('./package.json', 'utf-8')).version;
-  let tmp = JSON.parse(fs.readFileSync('./platforms/desktop/tauri.conf.json', 'utf-8')).package.version;
-  tmp.version = version;
+  let tmp = JSON.parse(fs.readFileSync('./platforms/desktop/tauri.conf.json', 'utf-8'));
+  tmp.package.version = version;
   fs.writeFileSync('./platforms/desktop/tauri.conf.json', JSON.stringify(tmp, undefined, 2), 'utf-8');
 }
 
@@ -39,7 +39,7 @@ module.exports = (env) => {
   
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'main.[hash].js',
+      filename: 'main-[hash].js',
       publicPath: '/'
     },
   
@@ -100,7 +100,7 @@ module.exports = (env) => {
     },
   
     plugins: [
-      new MiniCssExtractPlugin({filename: 'main.[hash].css'}),
+      new MiniCssExtractPlugin({filename: 'main-[hash].css'}),
       new HtmlWebpackPlugin({
         template: path.resolve(__dirname, './index.html')
       }),

@@ -21,7 +21,9 @@
         "removeFile": true,
         "renameFile": true,
         "exists": true,
-        "scope": ["*"]
+        "scope": [
+          "*"
+        ]
       },
       "dialog": {
         "open": true
@@ -32,7 +34,10 @@
       "http": {
         "all": true,
         "request": true,
-        "scope": ["https://**", "http://**"]
+        "scope": [
+          "https://**",
+          "http://**"
+        ]
       }
     },
     "bundle": {
@@ -77,10 +82,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "width": 750,
-        "height": 1000,
+        "height": 600,
         "resizable": true,
-        "title": "Awaken"
+        "title": "Awaken",
+        "width": 800
       }
     ]
   }

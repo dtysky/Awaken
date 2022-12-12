@@ -31,7 +31,7 @@
     "dev-desktop": "cd ./platforms/desktop && tauri dev",
     "copy-desktop": "d=platforms/desktop/assets && rm -rf $d && mkdir $d && cp dist/* $d",
     "copy-android": "d=platforms/android/app/src/main/assets && rm -rf $d && mkdir $d && cp dist/* $d",
-    "copy-ios": "d=platforms/desktop/assets && rm -rf $d && mkdir $d && cp dist/* $d",
+    "copy-ios": "d=platforms/ios/Awaken/assets && rm -rf $d && mkdir $d && cp dist/* $d",
     "build": "rm -rf dist && webpack --config webpack.config.js --env production=true && npm run copy-desktop && npm run copy-android && npm run copy-ios",
     "release-desktop": "cd ./platforms/desktop && tauri build",
     "release": "npm run build && npm run release-desktop"

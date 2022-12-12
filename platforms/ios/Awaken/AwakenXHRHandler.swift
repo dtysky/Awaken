@@ -21,7 +21,7 @@ public class AwakenXHRHandler: NSObject, WKURLSchemeHandler {
         let request = urlSchemeTask.request
         guard let requestUrl = request.url else { return }
         var method = requestUrl.path
-        method = String(method[method.index(method.startIndex, offsetBy: 1)...])
+        method = method == "" ? method : String(method[method.index(method.startIndex, offsetBy: 1)...])
         var params: [String: String] = [:]
         let components = URLComponents(url: requestUrl, resolvingAgainstBaseURL: true)
         let queryItems = components?.queryItems;
