@@ -112,6 +112,15 @@ export const worker: IWorker = {
       jsb.selectFiles('选择书籍', 'application/epub+zip');
     });
   },
+  async selectNote() {
+    return new Promise(resolve => {
+      window['Awaken_SelectFilesHandler'] = (files: string[]) => {
+        resolve(files);
+      }
+
+      jsb.selectFiles('选择Kindle导出的笔记', 'text/html');
+    });
+  },
   async setBackground(r: number, g: number, b: number) {
     jsb.setBackground(r, g, b);
   },

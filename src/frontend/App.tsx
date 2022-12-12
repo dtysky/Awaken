@@ -130,6 +130,22 @@ export default function App() {
             setBooks(bks);
             setLoadingInfo('');
           }}
+          onImportBookNotes={async book => {
+            const fp = (await bk.worker.selectNote())[0];
+            if (!fp) {
+              return;
+            }
+
+            setLoadingInfo('开始导入笔记...');
+
+            try {
+              await webdav.importNotes(book, fp);
+            } catch (error) {
+              bk.worker.showMessage(`导入失败：${error.message}`, 'error');
+            }
+
+            setLoadingInfo('');
+          }}
           onUpdateSettings={async s => {
             let webDavChanged = settings.webDav.url !== s.webDav.url ||
               settings.webDav.user !== s.webDav.user;

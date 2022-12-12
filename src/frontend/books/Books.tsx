@@ -22,6 +22,7 @@ export interface IBooksProps {
   onUpdateSettings(config: ISystemSettings): void;
   onAddBooks(files: string[]): void;
   onRemoveBook(book: IBook): void;
+  onImportBookNotes(book: IBook): void;
   onSync(): void;
 }
 
@@ -48,6 +49,9 @@ export default function Books(props: IBooksProps) {
             onDelete={() => {
               setBookDelete(book);
               setShowDelete(true);
+            }}
+            onImportNotes={() => {
+              props.onImportBookNotes(book)
             }}
           />
         ))}
@@ -76,6 +80,7 @@ interface IBookProps {
   book: IBook;
   onSelect(): void;
   onDelete(): void;
+  onImportNotes(): void;
 }
 
 const colorHash = new ColorHash();
@@ -89,16 +94,10 @@ function Book(props: IBookProps) {
         backgroundColor: colorHash.hex(props.book.hash)
       }}
     >
-      {
-        bk.supportAddDeleteBook && (
-          <IconButton
-            type='close'
-            size='large'
-            onClick={props.onDelete}
-          />
-        )
-      }
-      <div onClick={props.onSelect}>
+      <div
+        className={css.bookBg}
+        onClick={props.onSelect}
+      >
         {
           !props.book.cover && (
             <div className={css.bookInfo}>
@@ -108,6 +107,22 @@ function Book(props: IBookProps) {
           )
         }
       </div>
+      {
+        bk.supportAddDeleteBook && (
+          <div className={css.bookActions}>
+            <IconButton
+              type='offline'
+              size='large'
+              onClick={props.onImportNotes}
+            />
+            <IconButton
+              type='close'
+              size='large'
+              onClick={props.onDelete}
+            />
+          </div>
+        )
+      }
     </div>
   )
 }

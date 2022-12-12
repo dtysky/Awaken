@@ -38,6 +38,10 @@
           "https://**",
           "http://**"
         ]
+      },
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
       }
     },
     "bundle": {
@@ -74,7 +78,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost"
     },
     "updater": {
       "active": false
@@ -82,10 +86,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "width": 750,
+        "height": 1000,
         "resizable": true,
-        "title": "Awaken",
-        "width": 800
+        "title": "Awaken"
       }
     ]
   }

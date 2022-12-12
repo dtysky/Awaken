@@ -4,7 +4,7 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/9/13 23:11:56
  */
-import {fs, path, dialog, http} from '@tauri-apps/api';
+import {fs, path, dialog, http, tauri} from '@tauri-apps/api';
 import {proxy} from 'ajax-hook';
 
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
@@ -93,6 +93,24 @@ export const worker: IWorker = {
       return [selected];
     }
   },
+  async selectNote() {
+    const selected = await dialog.open({
+      title: '选择Kindle导出的笔记',
+      multiple: true,
+      filters: [{
+        name: '笔记',
+        extensions: ['html']
+      }]
+    });
+
+    if (Array.isArray(selected)) {
+      return selected;
+    } else if (selected === null) {
+      return [];
+    } else {
+      return [selected];
+    }
+  },
   async showMessage(msg: string, type: TToastType, title?: string) {
     await dialog.message(msg, {type, title});
   },
@@ -107,8 +125,10 @@ export const worker: IWorker = {
       return '';
     }
 
-    const content = await worker.fs.readFile(`${book.hash}/cover.png`, 'binary', 'Books') as ArrayBuffer;
-    return URL.createObjectURL(new Blob([content]));
+    return tauri.convertFileSrc(`${BOOKS_FOLDER}/${book.hash}/cover.png`);
+    // const content = await worker.fs.readFile(`${book.hash}/cover.png`, 'binary', 'Books') as ArrayBuffer;
+    // return URL.createObjectURL(new Blob([content]));
+
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {

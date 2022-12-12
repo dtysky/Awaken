@@ -11,7 +11,7 @@ import * as md5 from 'js-md5';
 import bk from '../backend';
 import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
 import {fillBookCover} from './utils';
-import { ISystemSettings } from '../interfaces';
+import {ISystemSettings} from '../interfaces';
 
 export interface IBookContent {
   content: ArrayBuffer;
@@ -46,7 +46,6 @@ class WebDAV {
 
     try {
       const hasBookIndexes = await this._client.exists('Awaken');
-      console.log(hasBookIndexes);
       if (!hasBookIndexes) {
         await this._client.createDirectory('Awaken');
         await this._client.putFileContents(getRemote('books.json'), '[]');
@@ -433,6 +432,71 @@ class WebDAV {
     book.ts = Date.now();
 
     return books;
+  }
+
+  public async importNotes(book: IBook, filePath: string) {
+    const dom = document.createElement('html');
+    dom.innerHTML = await bk.worker.fs.readFile(filePath, 'utf8', 'None') as string;
+
+    let title = dom.querySelector('div.bookTitle')?.textContent?.trim();
+    console.log(title)
+    if (!title) {
+      throw new Error('不是合法的Kindle笔记文件！');
+    }
+
+    title = title.slice(1, title.length - 1);
+    if (title !== book.name) {
+      throw new Error(`文件为《${title}》的笔记，和书籍《${book.name}》不匹配！`);
+    }
+    console.log(dom)
+
+    const metaInfos = dom.querySelectorAll('h3.noteHeading');
+    const metaNotes = dom.querySelectorAll('div.noteText');
+    const notes: IBookNote[] = [];
+
+    let i: number = 0;
+    while (i < metaInfos.length) {
+      const info = metaInfos[i].textContent;
+      let text = metaNotes[i].textContent;
+      let annotation: string = '';
+
+      const nextInfo = metaInfos[i + 1]?.textContent;
+      if (nextInfo?.startsWith('备注')) {
+        annotation = metaNotes[i + 1].textContent;
+      }
+
+      if (nextInfo) {
+        text = text.replace(nextInfo, '').trim();
+        const nn = metaInfos[i + 2]?.textContent;
+
+        if (annotation && nn) {
+          annotation = annotation.replace(nn, '');
+        }
+      }
+
+      text = text.replace(/\s+/g, '');
+      console.log(info);
+      console.log(text);
+      console.log(annotation);
+
+      const page = parseInt(/第 (\d+) 页/.exec(info)[1], 10);
+      const pos = parseInt(/位置 (\d+)/.exec(info)[1], 10);
+      const endPos = pos + text.length;
+
+      console.log(page, pos, endPos)
+      notes.push({
+        cfi: '',
+        start: '',
+        end: '',
+        page,
+        text,
+        annotation,
+        modified: Date.now()
+      });
+
+      i += annotation ? 2 : 1;
+      break;
+    }
   }
 }
 

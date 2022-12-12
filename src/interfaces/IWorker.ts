@@ -33,6 +33,7 @@ export interface IWorker {
   saveSettings(settings: ISystemSettings): Promise<void>;
   selectFolder(): Promise<string>;
   selectBook(): Promise<string[]>;
+  selectNote(): Promise<string[]>;
   showMessage(msg: string, type: TToastType, title?: string): Promise<void>;
   setBackground(r: number, g: number, b: number): Promise<void>;
   onAppHide(callback: () => void): void;
