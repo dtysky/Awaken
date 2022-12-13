@@ -25,7 +25,7 @@ export interface IBookNote {
   start: string;
   // cfi start
   end: string;
-  page: number;
+  page?: number;
   // for note
   text?: string;
   // default to ''

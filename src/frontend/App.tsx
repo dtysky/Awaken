@@ -13,7 +13,8 @@ import {IBook} from '../interfaces/protocols';
 import Books from './books/Books';
 import {
   loadSettings, saveSettings, loadBooks,
-  selectFolder, selectBook
+  selectFolder,
+  selectNote
 } from './utils';
 import webdav from './webdav';
 import {ISystemSettings} from '../interfaces';
@@ -78,13 +79,13 @@ export default function App() {
           books={books}
           onSelect={async index => {
             setLoadingInfo('书籍打开中...');
-            const res = await webdav.checkAndDownloadBook(books[index]);
-            if (!res) {
+            try {
+              await webdav.checkAndDownloadBook(books[index], setLoadingInfo); 
               setCurrent(index);
               setState('Reader');
               setLoadingInfo('');
-            } else {
-              bk.worker.showMessage(res, 'error');
+            } catch (error) {
+              bk.worker.showMessage(error.message, 'error');
               setLoadingInfo('');
             }
           }}
@@ -131,7 +132,7 @@ export default function App() {
             setLoadingInfo('');
           }}
           onImportBookNotes={async book => {
-            const fp = (await bk.worker.selectNote())[0];
+            const fp = (await selectNote())[0];
             if (!fp) {
               return;
             }
@@ -139,8 +140,9 @@ export default function App() {
             setLoadingInfo('开始导入笔记...');
 
             try {
-              await webdav.importNotes(book, fp);
+              await webdav.importNotes(book, fp, setLoadingInfo);
             } catch (error) {
+              console.error(error)
               bk.worker.showMessage(`导入失败：${error.message}`, 'error');
             }
 
