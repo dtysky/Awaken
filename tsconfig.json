@@ -2,7 +2,7 @@
   "compilerOptions": {
     "jsx": "react",
     "experimentalDecorators": true,
-    "target": "ES5",
+    "target": "ES6",
     "noImplicitAny": false,
     "module": "commonjs",
     "allowJs": true,

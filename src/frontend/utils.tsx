@@ -94,66 +94,168 @@ export async function searchFirstInBook(
     return undefined;
   }
 
-  const res = findFromSection(section, text)[0];
-  if (res) {
-    res.section = i;
-    return res;
+  const cfi = findFromSection(section, text);
+  console.log(cfi)
+  return cfi ? {cfi, section: i} : undefined;
+}
+
+/**
+ * 这是一个无奈的hack...
+ * 用`query`的前N个字获取`cfiStart`，后N个字获取`cfiEnd`，最后merge
+ * N看实际情况来取，而`textE`需要在`textS`（无link）/`linkE`（有link）的十六个结点之内
+ * 
+ * 先判断是否有[\d+]的link，没有的话
+ *  小于八个字的，直接全文搜索
+ *  大于八个字的，拆成前八后八两部分，分别搜索后合并
+ * 有的话
+ *  先查找到第一个link，然后反向搜索link前的文本的前（小于等于八个字），没有文本则直接以link为起点
+ *  然后找到最后一个link，正向搜索link后的文本的最后（小于等于八个字），没有文本则以link为终点
+ */
+function findFromSection(section: any, query: string): string {
+  const texts = query.split(/\[\d+?\]/g);
+  const links = [...query.matchAll(/(\[\d+?\])/g)].map(v => v[1]);
+  let textS: string;
+  let textE: string;
+  let linkS: string;
+  let linkE: string;
+
+  if (!links.length) {
+    const text = texts[0];
+    if (text.length <= 8) {
+      textS = text;
+    } else {
+      textS = text.slice(0, 8);
+      textE = text.slice(text.length - 8, text.length);
+    }
+  } else {
+    linkS = links[0];
+    linkE = links.pop();
+    textS = texts[0];
+    textE = texts.pop();
+
+    if (query.startsWith(linkS)) {
+      textS = undefined;
+    } else {
+      textS = textS.slice(0, 8);
+    }
+
+    if (query.endsWith(linkE)) {
+      textE = undefined;
+    } else {
+      textE = textE.slice(Math.max(textE.length - 8, 0), textE.length);
+    }
+  }
+
+  const firstP = section.document.querySelector('p');
+  if (!firstP) {
+    return undefined;
+  }
+
+  let nodeS: Node, nodeE: Node;
+  let posS: number, posE: number;
+  // pos = text.indexOf(query, last + 1);
+
+  if (!textE && !linkS && !linkE) {
+    nodeS = walkFromNode(firstP, node => {
+      posS = node.textContent.replace('\x20', '').indexOf(textS);
+      return posS >= 0;
+    });
+
+    return nodeS ? getRange(section, nodeS, posS, nodeS, posS + textE.length) : undefined;
+  }
+
+  if (!linkS && !linkE) {
+    nodeS = walkFromNode(firstP, node => {
+      posS = node.textContent.replace('\x20', '').indexOf(textS);
+      return posS >= 0;
+    });
+
+    if (!nodeS) {
+      return undefined;
+    }
+
+    nodeE = walkFromNode(nodeS, node => {
+      posE = node.textContent.replace('\x20', '').indexOf(textE);
+      return posE >= 0;
+    });
+
+    return nodeE ? getRange(section, nodeS, posS, nodeE, posE + textE.length) : undefined;
+  }
+
+  nodeS = walkFromNode(firstP, node => {
+    posS = node.textContent.indexOf(linkS);
+    return posS >= 0;
+  });
+
+  if (!nodeS) {
+    return undefined;
+  }
+
+  nodeE = linkS === linkE ? nodeS : walkFromNode(nodeS, node => {
+    posE = node.textContent.indexOf(linkE);
+    return posE >= 0;
+  });
+
+  if (!nodeE) {
+    return undefined;
+  }
+
+  if (textS) {
+    nodeS = walkFromNode(nodeS, node => {
+      posS = node.textContent.replace('\x20', '').indexOf(textS);
+      return posS >= 0;
+    }, true);
+  }
+
+  if (!nodeS) {
+    return undefined;
+  }
+
+  if (textE) {
+    nodeE = walkFromNode(nodeE, node => {
+      posE = node.textContent.replace('\x20', '').indexOf(textE);
+      return posE >= 0;
+    });
+  }
+
+  return nodeE ? getRange(section, nodeS, posS, nodeE, posE + (textE || linkE).length) : undefined;
+}
+
+function getRange(section: any, nodeS: Node, posS: number, nodeE: Node, posE: number) {
+  const range = (section.document as Document).createRange();
+  range.setStart(nodeS, posS);
+  range.setEnd(nodeE, posE);
+
+  return section.cfiFromRange(range);
+}
+
+function walkFromNode(node: Node, cb: (node: Node) => boolean, reverse: boolean = false): Node {
+  if (node.childNodes.length) {
+    if (reverse) {
+      return walkFromNode(node.childNodes[node.childNodes.length - 1], cb);
+    }
+
+    return walkFromNode(node.childNodes[0], cb);
+  }
+
+  if (cb(node)) {
+    return node;
+  }
+
+  while (node) {
+    if (reverse) {
+      if (node.previousSibling) {
+        return walkFromNode(node.previousSibling, cb);
+      }  
+    } else {
+      if (node.nextSibling) {
+        return walkFromNode(node.nextSibling, cb);
+      }
+    }
+
+
+    node = node.parentNode;
   }
 
   return undefined;
-}
-
-// 这是一个无奈的hack...
-// 用`query`的前N个字获取`cfiStart`，后N个字获取`cfiEnd`，最后merge
-// N看实际情况来取，而`end`需要在`start`的十六段之内
-function findFromSection(section: any, _query: string): {cfi: string, section?: number}[] {
-  const matches: {cfi: string, excerpt: string}[] = [];
-  const query = _query.toLowerCase();
-  const find = function(node: HTMLElement){
-    const text = node.textContent.toLowerCase();
-    let range = section.document.createRange();
-    let cfi: string;
-    let pos: number;
-    let last: number = -1;
-    let excerpt: string;
-    let limit: number = 150;
-
-    while (pos != -1) {
-      pos = text.indexOf(query, last + 1);
-
-      if (pos != -1) {
-        // 还得再想想，这块，有footprint link的地方，怎么处理
-        console.log(node, node.childNodes, pos)
-        range = section.document.createRange();
-        range.setStart(node, pos);
-        range.setEnd(node, pos + query.length);
-
-        cfi = section.cfiFromRange(range);
-
-        // Generate the excerpt
-        if (node.textContent.length < limit) {
-          excerpt = node.textContent;
-        } else {
-          excerpt = node.textContent.substring(pos - limit/2, pos + limit/2);
-          excerpt = "..." + excerpt + "...";
-        }
-
-        // Add the CFI to the matches list
-        matches.push({
-          cfi: cfi,
-          excerpt: excerpt
-        });
-      }
-
-      last = pos;
-    }
-  };
-
-  const elements = (section.document as Document).getElementsByTagName('p');
-  const len = elements.length;
-  for (let i = 0; i < len; i += 1) {
-    find(elements[i]);
-  }
-
-  return matches;
 }

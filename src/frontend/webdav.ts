@@ -463,7 +463,7 @@ class WebDAV {
     await epub.open(content);
 
     const metaInfos = dom.querySelectorAll('h3.noteHeading');
-    const metaNotes = dom.querySelectorAll('div.noteText');
+    const metaNotes = [...dom.querySelectorAll('div.noteText')].map(note => note.childNodes[0]);
     const notes: IBookNote[] = [];
 
     onUpdate(`检测到 ${metaInfos.length} 条标注或笔记，准备分析...`);
@@ -492,7 +492,11 @@ class WebDAV {
       text = text.replace(/\s+/g, '');
       const title = /- ([\s\S]+?) > 第/.exec(info)?.[1]
 
-      console.log(title, text)
+      console.log(title)
+      console.log(text)
+      // if (title === '第二十四章召回大师') {
+      //   debugger
+      // }
       const res = await searchFirstInBook(text, epub, title, section);
       if (res) {
         const cfi = res.cfi;
