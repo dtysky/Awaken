@@ -78,7 +78,7 @@ export default function App() {
           books={books}
           onSelect={async index => {
             setLoadingInfo('书籍打开中...');
-            const res = await webdav.checkAndDownloadBook(books[index]);
+            const res = await webdav.checkAndDownloadBook(books[index], setLoadingInfo);
             if (!res) {
               setCurrent(index);
               setState('Reader');

@@ -226,7 +226,7 @@ class WebDAV {
     return await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
   }
 
-  async checkAndDownloadBook(book: IBook): Promise<string> {
+  async checkAndDownloadBook(book: IBook, onUpdate: (info: string) => void): Promise<string> {
     const bookFp = `${book.hash}/${book.name}.epub`;
 
     if (!(await bk.worker.fs.exists(bookFp, 'Books')) && !this.connected) {
@@ -234,7 +234,8 @@ class WebDAV {
     };
 
     try {
-      await this._writeWithCheck(book, `${book.name}.epub`);
+      onUpdate('首次从远端拉取书籍内容...');
+      await this._writeWithCheck(book, `${book.name}.epub`, onUpdate);
       return '';
     } catch (error) {
       return `书籍下载出错：${error.message || error}`;
