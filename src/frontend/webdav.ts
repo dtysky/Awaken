@@ -10,8 +10,9 @@ import * as md5 from 'js-md5';
 
 import bk from '../backend';
 import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
-import {fillBookCover} from './utils';
+import {fillBookCover, searchFirstInBook} from './utils';
 import {ISystemSettings} from '../interfaces';
+import { splitCFI } from './reader/common';
 
 export interface IBookContent {
   content: ArrayBuffer;
@@ -211,34 +212,34 @@ class WebDAV {
     return books;
   }
 
-  private async _writeWithCheck(book: IBook, filename: string, onUpdate?: (info: string) => void) {
+  private async _writeWithCheck(book: IBook, filename: string, onUpdate?: (info: string) => void): Promise<ArrayBuffer | string> {
     const {fs} = bk.worker;
     const fp = `${book.hash}/${filename}`;
     const existed = await fs.exists(fp, 'Books');
 
     if (existed) {
-      return;
+      return undefined;
     }
 
     const tmp = await this._client.getFileContents(getRemote(fp), {format: /json$/.test(filename) ? 'text' : 'binary', onDownloadProgress: ({loaded, total}) => {
       onUpdate?.(`拉取书籍 ${book.name} 的 ${filename} 到本地：${~~(loaded / total * 100)}%`);
     }});
-    return await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
+    await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
+
+    return tmp as ArrayBuffer | string;
   }
 
-  async checkAndDownloadBook(book: IBook, onUpdate: (info: string) => void): Promise<string> {
+  async checkAndDownloadBook(book: IBook, onUpdate: (info: string) => void): Promise<ArrayBuffer> {
     const bookFp = `${book.hash}/${book.name}.epub`;
 
     if (!(await bk.worker.fs.exists(bookFp, 'Books')) && !this.connected) {
-      return '书籍未下载并且未连接到服务器，请先连接服务器';
+      throw new Error('书籍未下载并且未连接到服务器，请先连接服务器');
     };
 
     try {
-      onUpdate('首次从远端拉取书籍内容...');
-      await this._writeWithCheck(book, `${book.name}.epub`, onUpdate);
-      return '';
+      return await this._writeWithCheck(book, `${book.name}.epub`, onUpdate) as ArrayBuffer;
     } catch (error) {
-      return `书籍下载出错：${error.message || error}`;
+      throw new Error(`书籍下载出错：${error.message || error}`);
     }
   }
   
@@ -435,12 +436,13 @@ class WebDAV {
     return books;
   }
 
-  public async importNotes(book: IBook, filePath: string) {
+  public async importNotes(book: IBook, filePath: string, onUpdate: (info: string) => void) {
+    const {fs} = bk.worker;
     const dom = document.createElement('html');
     dom.innerHTML = await bk.worker.fs.readFile(filePath, 'utf8', 'None') as string;
 
+    onUpdate('校验书籍和笔记一致性...');
     let title = dom.querySelector('div.bookTitle')?.textContent?.trim();
-    console.log(title)
     if (!title) {
       throw new Error('不是合法的Kindle笔记文件！');
     }
@@ -449,13 +451,25 @@ class WebDAV {
     if (title !== book.name) {
       throw new Error(`文件为《${title}》的笔记，和书籍《${book.name}》不匹配！`);
     }
-    console.log(dom)
+    console.log(dom);
+
+    const bookFp = `${book.hash}/${book.name}.epub`;
+    let content = await this.checkAndDownloadBook(book, onUpdate);
+    if (!content) {
+      content = await fs.readFile(bookFp, 'binary', 'Books') as ArrayBuffer;
+    }
+
+    const epub = ePub();
+    await epub.open(content);
 
     const metaInfos = dom.querySelectorAll('h3.noteHeading');
     const metaNotes = dom.querySelectorAll('div.noteText');
     const notes: IBookNote[] = [];
 
+    onUpdate(`检测到 ${metaInfos.length} 条标注或笔记，准备分析...`);
+
     let i: number = 0;
+    let section: number = 0;
     while (i < metaInfos.length) {
       const info = metaInfos[i].textContent;
       let text = metaNotes[i].textContent;
@@ -476,28 +490,33 @@ class WebDAV {
       }
 
       text = text.replace(/\s+/g, '');
-      console.log(info);
-      console.log(text);
-      console.log(annotation);
+      const title = /- ([\s\S]+?) > 第/.exec(info)?.[1]
 
-      const page = parseInt(/第 (\d+) 页/.exec(info)[1], 10);
-      const pos = parseInt(/位置 (\d+)/.exec(info)[1], 10);
-      const endPos = pos + text.length;
+      console.log(title, text)
+      const res = await searchFirstInBook(text, epub, title, section);
+      if (res) {
+        const cfi = res.cfi;
+        const [start, end] = splitCFI(cfi);
+        section = res.section;
 
-      console.log(page, pos, endPos)
-      notes.push({
-        cfi: '',
-        start: '',
-        end: '',
-        page,
-        text,
-        annotation,
-        modified: Date.now()
-      });
+        notes.push({
+          cfi, start, end,
+          text, annotation,
+          modified: Date.now()
+        });
+        console.log('success', section)
+      } else {
+        // 收集起来，然后返回未导入的笔记，后面可以提示“以下笔记未能自动导入，请手动导入：”
+        console.log('fail')
+        section = 0;
+      }
 
       i += annotation ? 2 : 1;
-      break;
+      onUpdate(`分析进度 ${i} / ${metaInfos.length} 条...`);
     }
+
+    onUpdate(`分析完成，准备和已存在的笔记合并...`);
+    console.log(notes);
   }
 }
 

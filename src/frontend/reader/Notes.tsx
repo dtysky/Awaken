@@ -49,7 +49,6 @@ export function Notes(props: INotesProps) {
           >
             <Postcard
               title="笔记"
-              subtitle={`第${item.page}页`}
             >
               <div className={css.notesActions}>
                 <IconButton
