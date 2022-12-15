@@ -95,7 +95,8 @@ export function Viewer(props: IViewerProps) {
         height: '100%',
         method: 'default',
         stylesheet: props.bookStyle,
-        allowScriptedContent: true
+        allowScriptedContent: true,
+        allowPopups: true
       } as any);
       setStyle(props.bookStyle);
 

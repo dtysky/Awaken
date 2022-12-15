@@ -1,8 +1,10 @@
 package com.dtysky.Awaken
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Message
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -10,6 +12,7 @@ import android.view.WindowManager
 import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
 import java.io.ByteArrayInputStream
+
 
 class MainActivity : AppCompatActivity() {
     var mainWebView: AwakenWebView? = null
@@ -71,6 +74,22 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     return super.shouldInterceptRequest(view, request)
+                }
+            }
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onCreateWindow(
+                    view: WebView,
+                    dialog: Boolean,
+                    userGesture: Boolean,
+                    resultMsg: Message
+                ): Boolean {
+                    val result = view.hitTestResult
+                    val data = result.extra
+                    val context = view.context
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(data))
+                    context.startActivity(browserIntent)
+                    return false
                 }
             }
         }

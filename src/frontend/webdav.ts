@@ -437,7 +437,7 @@ class WebDAV {
   }
 
   public async importNotes(book: IBook, filePath: string, onUpdate: (info: string) => void) {
-    const {fs} = bk.worker;
+    const {fs, showMessage} = bk.worker;
     const dom = document.createElement('html');
     dom.innerHTML = await bk.worker.fs.readFile(filePath, 'utf8', 'None') as string;
 
@@ -451,7 +451,6 @@ class WebDAV {
     if (title !== book.name) {
       throw new Error(`文件为《${title}》的笔记，和书籍《${book.name}》不匹配！`);
     }
-    console.log(dom);
 
     const bookFp = `${book.hash}/${book.name}.epub`;
     let content = await this.checkAndDownloadBook(book, onUpdate);
@@ -468,6 +467,7 @@ class WebDAV {
 
     onUpdate(`检测到 ${metaInfos.length} 条标注或笔记，准备分析...`);
 
+    const failed: string[] = [];
     let i: number = 0;
     let section: number = 0;
     while (i < metaInfos.length) {
@@ -490,14 +490,8 @@ class WebDAV {
       }
 
       text = text.replace(/\s+/g, '');
-      const title = /- ([\s\S]+?) > 第/.exec(info)?.[1]
 
-      console.log(title)
-      console.log(text)
-      // if (title === '第二十四章召回大师') {
-      //   debugger
-      // }
-      const res = await searchFirstInBook(text, epub, title, section);
+      const res = await searchFirstInBook(text, epub, section);
       if (res) {
         const cfi = res.cfi;
         const [start, end] = splitCFI(cfi);
@@ -508,10 +502,8 @@ class WebDAV {
           text, annotation,
           modified: Date.now()
         });
-        console.log('success', section)
       } else {
-        // 收集起来，然后返回未导入的笔记，后面可以提示“以下笔记未能自动导入，请手动导入：”
-        console.log('fail')
+        failed.push(`${info}标注：${text}${annotation ? '笔记：' + annotation : ''}\n`);
         section = 0;
       }
 
@@ -521,6 +513,27 @@ class WebDAV {
 
     onUpdate(`分析完成，准备和已存在的笔记合并...`);
     console.log(notes);
+    console.log(failed);
+
+    const fp = `${book.hash}/config.json`;
+    const config = JSON.parse(await fs.readFile(fp, 'utf8', 'Books') as string) as IBookConfig;
+    config.notes = this._mergeNotes(config.notes, notes, {});
+    const configStr = JSON.stringify(config);
+    await fs.writeFile(fp, configStr, 'Books');
+
+    if (!this._client) {
+      showMessage('服务器未连接，暂不同步到远端...', 'warning');
+      return failed;
+    }
+
+    try {
+      onUpdate(`合并完成，同步到远端...`);
+      await this.syncBook(book, config);
+    } catch (error) {
+      showMessage('同步到远端失败，请手动重试...', 'error');
+    }
+
+    return failed;
   }
 }
 

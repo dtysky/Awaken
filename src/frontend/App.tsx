@@ -140,7 +140,12 @@ export default function App() {
             setLoadingInfo('开始导入笔记...');
 
             try {
-              await webdav.importNotes(book, fp, setLoadingInfo);
+              const failed = await webdav.importNotes(book, fp, setLoadingInfo);
+              if (failed.length) {
+                const str = failed.join('\n');
+                navigator.clipboard.writeText(str);
+                bk.worker.showMessage(`以下笔记自动导入失败，但已复制到剪切板，请手动标记（页数和位置为Kindle的，不是本软件的，供参考）：\n\n${str}`, 'warning');
+              }
             } catch (error) {
               console.error(error)
               bk.worker.showMessage(`导入失败：${error.message}`, 'error');

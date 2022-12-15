@@ -71,61 +71,51 @@ export async function selectNote() {
 
 export async function searchFirstInBook(
   text: string, book: ePub.Book,
-  title: string, fromSection: number
+  fromSection: number
 ): Promise<{cfi: string, section?: number}> {
   const spineItems = (book.spine as any).spineItems as any[];
   const len = spineItems.length;
-  let section: any;
   let i: number;
 
+  // 本来做了标题匹配的优化，但因为kindle笔记的鬼才设计，没有任何意义
   for (i = fromSection; i < len; i += 1) {
-    section = spineItems[i];
+    const section = spineItems[i];
     await section.load(book.load.bind(book));
-    const t = section.document.getElementsByTagName('h2')[0]?.textContent?.replace(/\[\d+?\]/g, '');
-
-    if (t === title) {
-      break;
+    
+    const cfi = findFromSection(section, text);
+    if (cfi) {
+      return {cfi, section: i};
     }
-
-    section = undefined;
   }
 
-  if (!section) {
-    return undefined;
-  }
-
-  const cfi = findFromSection(section, text);
-  console.log(cfi)
-  return cfi ? {cfi, section: i} : undefined;
+  return undefined;
 }
 
 /**
  * 这是一个无奈的hack...
- * 用`query`的前N个字获取`cfiStart`，后N个字获取`cfiEnd`，最后merge
- * N看实际情况来取，而`textE`需要在`textS`（无link）/`linkE`（有link）的十六个结点之内
+ * 用`query`的前N个字获取`rangeStart`，后N个字获取`rangeEnd`，最后合并
+ * N看实际情况来取，而`textE`需要在`textS`（无link）/`linkE`（有link）的十八个结点之内
  * 
  * 先判断是否有[\d+]的link，没有的话
- *  小于八个字的，直接全文搜索
- *  大于八个字的，拆成前八后八两部分，分别搜索后合并
+ *  小于六个字的，直接全文搜索
+ *  大于六个字的，拆成前六后六两部分，分别搜索后合并
  * 有的话
- *  先查找到第一个link，然后反向搜索link前的文本的前（小于等于八个字），没有文本则直接以link为起点
- *  然后找到最后一个link，正向搜索link后的文本的最后（小于等于八个字），没有文本则以link为终点
+ *  先查找到第一个link，然后反向搜索link前的文本的前（小于等于六个字），没有文本则直接以link为起点
+ *  然后找到最后一个link，正向搜索link后的文本的最后（小于等于六个字），没有文本则以link为终点
  */
 function findFromSection(section: any, query: string): string {
   const texts = query.split(/\[\d+?\]/g);
   const links = [...query.matchAll(/(\[\d+?\])/g)].map(v => v[1]);
-  let textS: string;
-  let textE: string;
-  let linkS: string;
-  let linkE: string;
+  let textS: string, textE: string;
+  let linkS: string, linkE: string;
 
   if (!links.length) {
     const text = texts[0];
-    if (text.length <= 8) {
+    if (text.length <= 6) {
       textS = text;
     } else {
-      textS = text.slice(0, 8);
-      textE = text.slice(text.length - 8, text.length);
+      textS = text.slice(0, 6);
+      textE = text.slice(text.length - 6, text.length);
     }
   } else {
     linkS = links[0];
@@ -136,13 +126,13 @@ function findFromSection(section: any, query: string): string {
     if (query.startsWith(linkS)) {
       textS = undefined;
     } else {
-      textS = textS.slice(0, 8);
+      textS = textS.slice(0, 6);
     }
 
     if (query.endsWith(linkE)) {
       textE = undefined;
     } else {
-      textE = textE.slice(Math.max(textE.length - 8, 0), textE.length);
+      textE = textE.slice(Math.max(textE.length - 6, 0), textE.length);
     }
   }
 
@@ -232,10 +222,10 @@ function getRange(section: any, nodeS: Node, posS: number, nodeE: Node, posE: nu
 function walkFromNode(node: Node, cb: (node: Node) => boolean, reverse: boolean = false): Node {
   if (node.childNodes.length) {
     if (reverse) {
-      return walkFromNode(node.childNodes[node.childNodes.length - 1], cb);
+      return walkFromNode(node.childNodes[node.childNodes.length - 1], cb, reverse);
     }
 
-    return walkFromNode(node.childNodes[0], cb);
+    return walkFromNode(node.childNodes[0], cb, reverse);
   }
 
   if (cb(node)) {
@@ -245,11 +235,11 @@ function walkFromNode(node: Node, cb: (node: Node) => boolean, reverse: boolean 
   while (node) {
     if (reverse) {
       if (node.previousSibling) {
-        return walkFromNode(node.previousSibling, cb);
+        return walkFromNode(node.previousSibling, cb, reverse);
       }  
     } else {
       if (node.nextSibling) {
-        return walkFromNode(node.nextSibling, cb);
+        return walkFromNode(node.nextSibling, cb, reverse);
       }
     }
 
