@@ -70,7 +70,7 @@ export default function Reader(props: IReaderProps) {
   React.useEffect(() => {
     if (state === 'Init') {
       setState('Loading');
-      setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`)
+      setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`);
       
       bk.worker.loadSettings().then(settings => {
         applyReadSettings(settings.read);
