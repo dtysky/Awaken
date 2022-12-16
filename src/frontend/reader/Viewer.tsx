@@ -93,7 +93,6 @@ export function Viewer(props: IViewerProps) {
       rendition = book.renderTo('epub-viewer', {
         width: '100%',
         height: '100%',
-        method: 'default',
         stylesheet: props.bookStyle,
         allowScriptedContent: true,
         allowPopups: true

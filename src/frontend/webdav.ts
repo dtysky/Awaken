@@ -144,6 +144,7 @@ class WebDAV {
           continue;
         }
 
+        onUpdate(`拉取书籍 ${book.name}到本地...`);
         const contents = await this._client.getDirectoryContents(getRemote(book.hash)) as FileStat[];
         if (!(await fs.exists(book.hash, 'Books'))) {
           await fs.createDir(book.hash, 'Books');
@@ -154,6 +155,7 @@ class WebDAV {
           if (stat.type !== 'file') {
             continue;
           }
+          onUpdate(`拉取书籍 ${book.name}的${stat.basename}到本地...`);
           !/\.epub$/.test(stat.basename) && await this._writeWithCheck(book, stat.basename, onUpdate);
         }
   
@@ -190,6 +192,7 @@ class WebDAV {
               continue;
             }
 
+            onUpdate(`同步书籍 ${book.name}的${name} 到远端...`);
             const data = await fs.readFile(fp, 'binary', 'Books');
             await this._client.putFileContents(getRemote(fp), data, {overwrite: name !== 'config.json', onUploadProgress: ({loaded, total}) => {
               onUpdate(`同步书籍 ${book.name} 的 ${name} 到远端：${~~(loaded / total * 100)}%`);
@@ -197,6 +200,7 @@ class WebDAV {
           }
         }
     
+        onUpdate(`同步目录到远端...`);
         booksStr = JSON.stringify(books);
         await fs.writeFile('books.json', booksStr, 'Books');
         await this._client.putFileContents(getRemote('books.json'), booksStr, {overwrite: true, onUploadProgress: ({loaded, total}) => {
@@ -237,6 +241,7 @@ class WebDAV {
     };
 
     try {
+      onUpdate(`从远端拉取书籍本体...`);
       return await this._writeWithCheck(book, `${book.name}.epub`, onUpdate) as ArrayBuffer;
     } catch (error) {
       throw new Error(`书籍下载出错：${error.message || error}`);
@@ -311,7 +316,15 @@ class WebDAV {
       const remote = remoteNotes[remoteIndex];
 
       const comp: number = !local ? 1 : !remote ? -1 : parser.compare(local.cfi, remote.cfi);
-      if (comp === 1) {
+      if (comp === 0) {
+        if (local.modified < remote.modified) {
+          less = remote;
+          remoteIndex += 1;  
+        } else {
+          less = local;
+          localIndex += 1;  
+        }
+      } else if (comp === 1) {
         less = remote;
         remoteIndex += 1;
       } else {
@@ -461,6 +474,17 @@ class WebDAV {
     const epub = ePub();
     await epub.open(content);
 
+    let pages: string;
+    if (await fs.exists(`${book.hash}/pages.json`, 'Books')) {
+      pages = await fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string;
+      epub.locations.load(pages);
+    } else {
+      onUpdate('首次生成书籍分页中...');
+      const ps = await epub.locations.generate(600);
+      pages = JSON.stringify(ps);
+      await this.savePages(book, ps);
+    }
+
     const metaInfos = dom.querySelectorAll('h3.noteHeading');
     const metaNotes = [...dom.querySelectorAll('div.noteText')].map(note => note.childNodes[0]);
     const notes: IBookNote[] = [];
@@ -501,6 +525,7 @@ class WebDAV {
 
         notes.push({
           cfi, start, end,
+          page: epub.locations.locationFromCfi(cfi) as unknown as number,
           text, annotation,
           modified: Date.now()
         });

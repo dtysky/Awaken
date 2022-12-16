@@ -14,6 +14,7 @@ import { IBookNote } from '../../interfaces/protocols';
 interface INotesProps {
   bookmarks: IBookNote[];
   notes: IBookNote[];
+  pagesLen: number;
   onJump(note: IBookNote): void;
 }
 
@@ -34,7 +35,7 @@ export function Notes(props: INotesProps) {
           >
             <Postcard
               title="书签"
-              subtitle={`第${item.page}页`}
+              subtitle={`第${item.page} / ${props.pagesLen} 页`}
             />
           </div>
         ))
@@ -49,6 +50,7 @@ export function Notes(props: INotesProps) {
           >
             <Postcard
               title="笔记"
+              subtitle={`第${item.page} / ${props.pagesLen} 页`}
             >
               <div className={css.notesActions}>
                 <IconButton

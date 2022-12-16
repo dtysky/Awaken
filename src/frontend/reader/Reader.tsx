@@ -35,6 +35,7 @@ export default function Reader(props: IReaderProps) {
   const [bookStyle, setBookStyle] = React.useState<string>();
   const [content, setContent] = React.useState<ArrayBuffer>();
   const [pages, setPages] = React.useState<string>();
+  const [pagesLen, setPagesLen] = React.useState<number>(0);
   const [bookmarks, setBookmarks] = React.useState<IBookNote[]>([]);
   const [notes, setNotes] = React.useState<IBookNote[]>([]);
   const [indexes, setIndexes] = React.useState<IBookIndex[]>();
@@ -176,6 +177,7 @@ export default function Reader(props: IReaderProps) {
                       <Notes
                         bookmarks={bookmarks}
                         notes={notes}
+                        pagesLen={pagesLen}
                         onJump={note => jump?.(EJumpAction.CFI, note.start)}
                       />    
                     ) : null
@@ -192,6 +194,7 @@ export default function Reader(props: IReaderProps) {
                   if (!pages) {
                     await webdav.savePages(props.book, pgs);
                   }
+                  setPagesLen(pgs.length);
                   setIndexes(indexes);
                   setCurrentIndex(indexes[0]);
                   setRange({start: 1, max: pgs.length});

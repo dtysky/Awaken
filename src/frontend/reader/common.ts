@@ -131,6 +131,7 @@ body {
   letter-spacing: ${settings.letterSpace || 0}rem;
   touch-action: none;
   -webkit-touch-callout: none;
+  word-break: break-all;
 }
 
 img {
