@@ -241,7 +241,7 @@ class WebDAV {
     };
 
     try {
-      onUpdate(`从远端拉取书籍本体...`);
+      onUpdate(`检测是否需要从远端拉取书籍本体...`);
       return await this._writeWithCheck(book, `${book.name}.epub`, onUpdate) as ArrayBuffer;
     } catch (error) {
       throw new Error(`书籍下载出错：${error.message || error}`);
@@ -538,8 +538,6 @@ class WebDAV {
     }
 
     onUpdate(`分析完成，准备和已存在的笔记合并...`);
-    console.log(notes);
-    console.log(failed);
 
     const fp = `${book.hash}/config.json`;
     const config = JSON.parse(await fs.readFile(fp, 'utf8', 'Books') as string) as IBookConfig;
