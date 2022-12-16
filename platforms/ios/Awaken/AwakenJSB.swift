@@ -19,7 +19,7 @@ public struct APIResult {
 
 let jsonEncoder = JSONEncoder()
 
-public class AwakenJSB: NSObject, WKScriptMessageHandler {
+public class AwakenJSB: NSObject, WKScriptMessageHandler, WKUIDelegate {
     public var initJS: String
     private var mBaseDir: URL
     private var mFileManager: FileManager
@@ -87,6 +87,16 @@ window.Awaken = {
             let params = message.body as! [String: Double]
             setBackground(r: params["r"]!, g: params["g"]!, b: params["b"]!)
         }
+    }
+    
+    public func webView(
+        _ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+        for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures
+    ) -> WKWebView? {
+        if navigationAction.targetFrame == nil {
+            UIApplication.shared.open(navigationAction.request.url!, options: [:])
+        }
+        return nil
     }
     
     public func callMethod(

@@ -51,7 +51,8 @@ struct WebView: UIViewRepresentable {
         let wkWebView = WKWebView(frame: .zero, configuration: config)
         wkWebView.scrollView.bounces = false
         wkWebView.scrollView.alwaysBounceHorizontal = false
-        wkWebView.scrollView.alwaysBounceVertical = false
+        wkWebView.scrollView.alwaysBounceVertical = false 
+        wkWebView.uiDelegate = jsb
 
         #if RELEASE
         let rp = Bundle.main.path(forResource: "index", ofType: "html", inDirectory: "assets")!
