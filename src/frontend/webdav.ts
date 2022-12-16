@@ -470,6 +470,7 @@ class WebDAV {
     const failed: string[] = [];
     let i: number = 0;
     let section: number = 0;
+    let firstNode: Node;
     while (i < metaInfos.length) {
       const info = metaInfos[i].textContent;
       let text = metaNotes[i].textContent;
@@ -491,11 +492,12 @@ class WebDAV {
 
       text = text.replace(/\s+/g, '');
 
-      const res = await searchFirstInBook(text, epub, section);
-      if (res) {
+      const res = await searchFirstInBook(text, epub, section, firstNode);
+      section = res.section;
+      firstNode = res.endNode;
+      if (res.cfi) {
         const cfi = res.cfi;
         const [start, end] = splitCFI(cfi);
-        section = res.section;
 
         notes.push({
           cfi, start, end,
@@ -504,7 +506,6 @@ class WebDAV {
         });
       } else {
         failed.push(`${info}标注：${text}${annotation ? '笔记：' + annotation : ''}\n`);
-        section = 0;
       }
 
       i += annotation ? 2 : 1;

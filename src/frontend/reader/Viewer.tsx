@@ -103,7 +103,7 @@ export function Viewer(props: IViewerProps) {
       book.loaded.navigation.then(nav => {
         const promise: Promise<string[]> = props.pages ?
           new Promise(resolve => resolve(book.locations.load(props.pages))) :
-          book.locations.generate(1000);
+          book.locations.generate(600);
 
         promise.then(pages => {
           idToHref = {};

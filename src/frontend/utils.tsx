@@ -71,8 +71,8 @@ export async function selectNote() {
 
 export async function searchFirstInBook(
   text: string, book: ePub.Book,
-  fromSection: number
-): Promise<{cfi: string, section?: number}> {
+  fromSection: number, firstNode: Node
+): Promise<{cfi: string, endNode: Node, section?: number}> {
   const spineItems = (book.spine as any).spineItems as any[];
   const len = spineItems.length;
   let i: number;
@@ -82,13 +82,14 @@ export async function searchFirstInBook(
     const section = spineItems[i];
     await section.load(book.load.bind(book));
     
-    const cfi = findFromSection(section, text);
-    if (cfi) {
-      return {cfi, section: i};
+    const res = findFromSection(section, text, i === fromSection ? firstNode : undefined);
+    if (res) {
+      res.section = i;
+      return res;
     }
   }
 
-  return undefined;
+  return {cfi: '', section: fromSection, endNode: firstNode};
 }
 
 /**
@@ -103,7 +104,9 @@ export async function searchFirstInBook(
  *  先查找到第一个link，然后反向搜索link前的文本的前（小于等于六个字），没有文本则直接以link为起点
  *  然后找到最后一个link，正向搜索link后的文本的最后（小于等于六个字），没有文本则以link为终点
  */
-function findFromSection(section: any, query: string): string {
+function findFromSection(
+  section: any, query: string, firstNode: Node
+): {cfi: string, endNode: Node, section?: number} {
   const texts = query.split(/\[\d+?\]/g);
   const links = [...query.matchAll(/(\[\d+?\])/g)].map(v => v[1]);
   let textS: string, textE: string;
@@ -136,7 +139,7 @@ function findFromSection(section: any, query: string): string {
     }
   }
 
-  const firstP = section.document.querySelector('p');
+  const firstP = firstNode || section.document.querySelector('p');
   if (!firstP) {
     return undefined;
   }
@@ -211,12 +214,14 @@ function findFromSection(section: any, query: string): string {
   return nodeE ? getRange(section, nodeS, posS, nodeE, posE + (textE || linkE).length) : undefined;
 }
 
-function getRange(section: any, nodeS: Node, posS: number, nodeE: Node, posE: number) {
+function getRange(
+  section: any, nodeS: Node, posS: number, nodeE: Node, posE: number
+): {cfi: string, endNode: Node, section?: number} {
   const range = (section.document as Document).createRange();
   range.setStart(nodeS, posS);
   range.setEnd(nodeE, posE);
 
-  return section.cfiFromRange(range);
+  return {cfi: section.cfiFromRange(range), endNode: nodeE};
 }
 
 function walkFromNode(node: Node, cb: (node: Node) => boolean, reverse: boolean = false): Node {
