@@ -31,7 +31,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         hideStatusAndTitleBar()
 
-        WebView.setWebContentsDebuggingEnabled(true)
+        if (BuildConfig.DEBUG) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
         mainWebView = findViewById(R.id.main)
         initWebViewSetting(mainWebView)
         jsb = AwakenJSB(this)
