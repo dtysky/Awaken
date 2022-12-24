@@ -37,5 +37,5 @@ export interface IWorker {
   showMessage(msg: string, type: TToastType, title?: string): Promise<void>;
   setBackground(r: number, g: number, b: number): Promise<void>;
   onAppHide(callback: () => void): void;
-  getCoverUrl(book: IBook): Promise<string>;
+  getCoverUrl(book: IBook): string;
 }

@@ -120,15 +120,8 @@ export const worker: IWorker = {
   onAppHide(callback: () => void) {
 
   },
-  async getCoverUrl(book: IBook): Promise<string> {
-    if (!(await worker.fs.exists(`${book.hash}/cover.png`, 'Books'))) {
-      return '';
-    }
-
+  getCoverUrl(book: IBook): string {
     return tauri.convertFileSrc(`${BOOKS_FOLDER}/${book.hash}/cover.png`);
-    // const content = await worker.fs.readFile(`${book.hash}/cover.png`, 'binary', 'Books') as ArrayBuffer;
-    // return URL.createObjectURL(new Blob([content]));
-
   },
   fs: {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {

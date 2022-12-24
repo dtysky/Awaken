@@ -34,14 +34,14 @@ export async function loadBooks() {
   }
 
   for (const book of books) {
-    await fillBookCover(book); 
+    fillBookCover(book); 
   }
 
   return books;
 }
 
-export async function fillBookCover(book: IBook) {
-  book.cover = await bk.worker.getCoverUrl(book);
+export function fillBookCover(book: IBook) {
+  book.cover = bk.worker.getCoverUrl(book);
 }
 
 export async function selectFolder(requireRes: boolean): Promise<string> {

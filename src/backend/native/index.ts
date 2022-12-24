@@ -130,7 +130,7 @@ export const worker: IWorker = {
   onAppHide(callback: () => void) {
     window['Awaken_AppHideCB'] = callback;
   },
-  async getCoverUrl(book: IBook): Promise<string> {
+  getCoverUrl(book: IBook): string {
     return `${API_PREFIX}/readBinaryFile?filePath=${book.hash}/cover.png&base=Books`;
   },
   fs: {

@@ -3,7 +3,8 @@
 ## todo
 
 异常处理，超时等
-未联网也允许添加书籍，但会提示一下
+未联网也允许添加书籍，但会提示一下  
+章节switch自动同步目录？
 
 书签逻辑有问题
 书签存cfi而不是页数
@@ -23,8 +24,17 @@
 
 多端，桌面（Windows、macOS、Linux），移动端（安卓、iOS）。
 
+确保一个设备同步完再同步另一个
+
 A cross-platform ebooks reader, supports win/android/mac/ios/linux, use wevdav to sync progress, hightlights and annotations.
 
+**本项目不接任何需求，但是欢迎任何BUG修复或功能性的PR，当然那种什么代码不符合你的审美改改格式、改改先进的构建工具之类的还是算了，恕我懒得处理**。
+
+功能展示见：
+
+## 开发
+
 ## Copyright
+
 **Copyright © 2022, 戴天宇, Tianyu Dai (dtysky < dtysky@outlook.com >). All Rights Reserved.**  
 **This project is free software and released under the** [GNU Lesser General Public License (LGPL)](https://www.gnu.org/licenses/lgpl-3.0.en.html).**

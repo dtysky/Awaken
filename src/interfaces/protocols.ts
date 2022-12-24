@@ -13,8 +13,6 @@ export interface IBook {
   author: string;
   ts: number;
   removed?: boolean;
-  // 以下是在打开是自动拼接
-  // 检查下`hash`目录下是否有cover
   cover?: string;
 }
 
