@@ -43,6 +43,8 @@ npm run dev
 npm run dev-desktop
 ```
 
+但注意需要在**非虚拟机包括WSL**环境执行。
+
 ### 安卓端
 
 用最新的**Android Studio**打开**platform/android**下的工程，然后修改`MainActivity.kt`中的字段：
@@ -91,7 +93,7 @@ npm run build
 npm run release-desktop
 ```
 
-即可。如果只发布桌面端，也可以直接执行：
+即可，但同样需要在**非虚拟机包括WSL**环境执行。如果只发布桌面端，也可以直接执行：
 
 ```sh
 npm run release
@@ -101,7 +103,7 @@ npm run release
 
 ### 安卓端
 
-打开项目工程，在`Build` -> `Select Build Variants`窗口，设置选择为`release`模式，然后`Build` -> `Make Project`即可。
+打开项目工程，在`Build` -> `Select Build Variants`窗口，设置选择为`release`模式，然后`Build` -> `Generate Signed Build or APK`即可，可能需要重新生成签名文件。
 
 产物在`platforms/android/app/release`中。
 
@@ -117,3 +119,8 @@ npm run release
 
 **Copyright © 2022, 戴天宇, Tianyu Dai (dtysky < dtysky@outlook.com >). All Rights Reserved.**  
 **This project is free software and released under the** [GNU Lesser General Public License (LGPL)](https://www.gnu.org/licenses/lgpl-3.0.en.html).**
+
+## 录制剧本
+
+
+

@@ -6,10 +6,10 @@ plugins {
 android {
     signingConfigs {
         release {
-            storeFile file('H:\\SpriaHeaven\\adkeys\\key.jks')
-            storePassword '02315343'
-            keyAlias 'upload'
-            keyPassword '02315343'
+            storeFile file('H:\\SpriaHeaven\\adkeys\\awaken.jks')
+            storePassword '114514114514'
+            keyAlias 'release'
+            keyPassword '114514114514'
         }
     }
     compileSdkVersion 30

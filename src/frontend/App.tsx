@@ -39,6 +39,11 @@ export default function App() {
         let promise = new Promise<void>(resolve => resolve());
         if (!s.folder) {
           promise = selectFolder(true).then(folder => {
+            console.log(folder)
+            if (!folder) {
+              throw new Error('必须选择一个文件夹！请退出应用后重新进入！')
+            }
+
             s.folder = folder;
             return saveSettings(s);
           });

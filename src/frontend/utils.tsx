@@ -51,6 +51,10 @@ export async function selectFolder(requireRes: boolean): Promise<string> {
     return folder;
   }
 
+  if (!folder && requireRes) {
+    return selectFolder(requireRes);
+  }
+
   const content = await bk.worker.fs.readDir(folder, 'None');
 
   if (content?.length) {
