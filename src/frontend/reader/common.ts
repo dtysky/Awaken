@@ -104,11 +104,17 @@ export function changeNote(
       notes.splice(status.index, 0, note);
     }
     status.exist = true;
-  } else if (action === ENoteAction.Delete) {
-    note.removed = Date.now();
-    status.exist = false;
   } else {
-    note.modified = Date.now();
+    if (status.exist) {
+      notes[status.index] = note;
+    }
+
+    if (action === ENoteAction.Delete) {
+      note.removed = Date.now();
+      status.exist = false;
+    } else {
+      note.modified = Date.now();
+    }
   }
 
   return Object.assign({}, status);

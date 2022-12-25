@@ -13,8 +13,7 @@ import {IBook} from '../interfaces/protocols';
 import Books from './books/Books';
 import {
   loadSettings, saveSettings, loadBooks,
-  selectFolder,
-  selectNote
+  selectFolder, selectNote
 } from './utils';
 import webdav from './webdav';
 import {ISystemSettings} from '../interfaces';
@@ -90,18 +89,28 @@ export default function App() {
             }
           }}
           onSync={async () => {
-            if (!webdav.connected && settings.webDav.url) {
-              await webdav.changeRemote(settings.webDav);
-            }
+            try {
+              if (!settings.webDav.url) {
+                bk.worker.showMessage('未指定远端服务器地址！', 'error');
+                return;
+              }
 
-            const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
-            setBooks(bks);
-            setLoadingInfo('');
+              setLoadingInfo('尝试连接中...');
+              if (!webdav.connected) {
+                await webdav.changeRemote(settings.webDav);
+              }
+  
+              const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+              setBooks(bks);
+              setLoadingInfo('');
+            } catch (error) {
+              bk.worker.showMessage(`${error.message || error}`, 'error');
+              setLoadingInfo('');
+            }
           }}
           onAddBooks={async files => {
             if (!webdav.connected) {
-              bk.worker.showMessage(`未连接到服务器，请现在“设定”中配置。`, 'error');
-              return;
+              bk.worker.showMessage(`未连接到服务器，仅会添加到本地，待到连接时同步。`, 'warning');
             }
 
             setLoadingInfo('准备添加书籍...');
@@ -120,8 +129,13 @@ export default function App() {
               }
             }
 
-            const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
-            setBooks(bks);
+            if (webdav.connected) {
+              const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+              setBooks(bks);
+            } else {
+              setBooks(books);
+            }
+
             setLoadingInfo('');
           }}
           onRemoveBook={async book => {
@@ -183,7 +197,7 @@ export default function App() {
                 setBooks(bks);
               } catch (error) {
                 s.webDav = Object.assign({}, settings.webDav);
-                bk.worker.showMessage(`连接失败： ${error.message || error}`, 'error');
+                bk.worker.showMessage(`${error.message || error}`, 'error');
               }
             }
 
@@ -219,13 +233,17 @@ export default function App() {
         closeOnClickBg={false}
         title={'是否连接到服务器？'}
         confirm={async () => {
-          // need user's action to connect server
-          setLoadingInfo('准备连接...')
+          setLoadingInfo('尝试连接中...');
           setShowModal(false);
-          await webdav.changeRemote(settings.webDav);
-          const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
-          setBooks(bks);
-          setLoadingInfo('');
+          try {
+            await webdav.changeRemote(settings.webDav);
+            const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+            setBooks(bks);
+            setLoadingInfo('');
+          } catch (error) {
+            bk.worker.showMessage(`${error.message || error}`, 'error');
+            setLoadingInfo('');
+          }
         }}
         cancel={() => setShowModal(false)}
       >

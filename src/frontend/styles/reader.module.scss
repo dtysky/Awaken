@@ -76,10 +76,18 @@
 .notes {
   position: absolute;
   z-index: 10;
-  width: 80%;
-  min-width: 200px;
-  max-width: 520px;
   height: 100%; 
+}
+
+.notesIndexes {
+  width: 60%;
+  min-width: 200px;
+  max-width: 420px;
+}
+
+.notesNotes {
+  width: 90%;
+  max-width: 520px; 
 }
 
 .notesContent {

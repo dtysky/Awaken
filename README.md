@@ -1,39 +1,52 @@
 # Awaken
 
-## todo
+一个多端同步阅读软件：
 
-异常处理，超时等
-未联网也允许添加书籍，但会提示一下  
-章节switch自动同步目录？
-试下直接安装`@tauri/cli`行不行
-
-书签逻辑有问题
-书签存cfi而不是页数
-
-移动端，默认选择文本后的弹窗
-
-记录的page下次进入，有时候无效
-
-自定义样式：
-各种样式配色
-
-例子多放几本书，各种不同的观点，多元文化主义，自由论，乡土中国，局外人，喧哗与骚动
-
-
-性能问题，一开始用另一个`json`将所有分页缓存，仅仅存于本地，不同步到远端 解决  
-基于WebDAV，支持添加和删除书籍书籍，书籍内支持进度、书签、标注和笔记，均支持多端同步。
-
-多端，桌面（Windows、macOS、Linux），移动端（安卓、iOS）。
-
-确保一个设备同步完再同步另一个
-
-A cross-platform ebooks reader, supports win/android/mac/ios/linux, use wevdav to sync progress, hightlights and annotations.
+1. 支持桌面（Windows、macOS、理论Linux）和移动端（安卓、iOS）。
+2. 基于**WebDAV**的书籍管理，支持进度、笔记、书签同步，并且支持从**Kindle**导入笔记。
+3. 仅支持**EPUB**电子书，其他的可以自行转换，例如[一键批量下载 Kindle 全部电子书工具 + 移除 DRM 解密插件 + 格式转换教程 (开源免费)](https://www.iplaysoft.com/kindle-download-dedrm.html)。
 
 **本项目不接任何需求，但是欢迎任何BUG修复或功能性的PR，当然那种什么代码不符合你的审美改改格式、改改先进的构建工具之类的还是算了，恕我懒得处理**。
 
 功能展示见：
 
+![![]()]()
+
 ## 开发
+
+首先`Clone`整个仓库，初始化项目：
+
+```sh
+nom run init
+```
+
+接着运行开发指令：
+
+```sh
+npm run dev
+```
+
+然后查到**本机IP地址**，记`url = ${IP}:8888`，分平台处理：
+
+### 桌面端
+
+
+
+### 安卓端
+
+### iOS端
+
+
+## 发布
+
+
+
+## todo
+
+移动端，默认选择文本后的弹窗
+
+自定义样式：
+各种样式配色
 
 ## Copyright
 

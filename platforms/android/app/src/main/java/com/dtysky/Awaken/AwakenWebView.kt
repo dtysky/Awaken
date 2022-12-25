@@ -2,15 +2,13 @@ package com.dtysky.Awaken
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.ActionMode
 import android.webkit.WebView
 
 
-class AwakenWebView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyle: Int = 0
-) : WebView(context, attrs, defStyle) {
+class AwakenWebView: WebView {
+    constructor(context: Context) : super(context) {}
+    constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {}
+    constructor(context: Context, attrs: AttributeSet, defStyle: Int) : super(context, attrs, defStyle) {}
 //    override fun startActionMode(callback: ActionMode.Callback?): ActionMode? {
 //        val actionMode = super.startActionMode(callback)
 //        return actionMode

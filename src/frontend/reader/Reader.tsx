@@ -160,7 +160,7 @@ export default function Reader(props: IReaderProps) {
                   />
                 )}
                 <Sidebar
-                  className={`${css.notes}`}
+                  className={`${css.notes} ${showIndexes ? css.notesIndexes : css.notesNotes}`}
                   open={showIndexes || showNotes}
                 >
                   {
@@ -208,15 +208,16 @@ export default function Reader(props: IReaderProps) {
 
                   setLoadingInfo('');
                 }}
-                onProgress={p => {
-                  setTs(Date.now());
-                  setProgress(p);
-                  setLastProgress(p);
-                }}
-                onBookmarkInfo={info => {
+                onBookmarkInfo={(info, withProgress) => {
                   if (info !== bookmarkInfo) {
                     setBookmarkInfo(info);
                     setBookmarkStatus(checkNoteMark(bookmarks, info.start, info.end));
+                  }
+
+                  if (withProgress) {
+                    setTs(Date.now());
+                    setProgress(info.page);
+                    setLastProgress(info.page);
                   }
                 }}
                 onChangeNotes={newNotes => {

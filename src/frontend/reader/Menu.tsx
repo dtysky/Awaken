@@ -105,6 +105,7 @@ export function Menu(props: IMenuProps) {
             color: defaultThemes[theme].color,
             fontSize: `${fontSize}rem`,
             lineHeight: `${fontSize + lineSpace}rem`,
+            letterSpacing: `${letterSpace}rem`,
             border: '1px solid #6c9'
           }}
         >

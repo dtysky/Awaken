@@ -51,14 +51,14 @@ export interface IViewerProps {
     jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void,
     syncNotes: (preNotes: IBookNote[], notes: IBookNote[]) => void
   ): void;
-  onBookmarkInfo(info: IBookNote): void;
-  onProgress(progress: number): void;
+  onBookmarkInfo(info: IBookNote, withProgress: boolean): void;
   onChangeNotes(notes: IBookNote[]): void;
 }
 
 type TState = 'Init' | 'Loading' | 'Ready';
 
 let rendition: ePub.Rendition;
+let withProgress: boolean = false;
 let idToHref: {[id: string]: string};
 function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
   const sub: IBookIndex[] = [];
@@ -76,14 +76,12 @@ export function Viewer(props: IViewerProps) {
 
   function updateProgress(location) {
     const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;
-    rendition.off('relocated', updateProgress);
-    props.onProgress(loc);
     props.onBookmarkInfo({
       start: location.start.cfi,
       end: location.end.cfi,
       cfi: mergeCFI(location.start.cfi, location.end.cfi),
       page: loc, modified: Date.now()
-    });
+    }, withProgress);
   }
 
   React.useEffect(() => {
@@ -110,11 +108,10 @@ export function Viewer(props: IViewerProps) {
           nav.toc.forEach(t => {
             convertEPUBIndex(t, indexes);
           });
+          rendition.on('relocated', updateProgress);
 
           const jump = (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => {
-            if (action !== EJumpAction.Page) {
-              rendition.on('relocated', updateProgress);
-            }
+            withProgress = action !== EJumpAction.Page;
 
             if (action === EJumpAction.Pre) {
               rendition.prev();
