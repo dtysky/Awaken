@@ -77,10 +77,15 @@ export const worker: IWorker = {
       settings = {
         folder: 'unnecessary',
         webDav: {
-          url: 'http://192.168.2.208:8889/dav',
-          user: 'dtysky',
-          password: '114514'
+          url: '',
+          user: '',
+          password: ''
         },
+        // webDav: {
+        //   url: 'http://192.168.2.208:8889/dav',
+        //   user: 'dtysky',
+        //   password: '114514'
+        // },
         read: Object.assign({
           theme: 0,
           font: '',

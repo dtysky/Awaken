@@ -315,7 +315,8 @@ class WebDAV {
       const local = localNotes[localIndex];
       const remote = remoteNotes[remoteIndex];
 
-      const comp: number = !local ? 1 : !remote ? -1 : parser.compare(local.cfi, remote.cfi);
+      // `parser.compare`实现有问题，不能直接比较`cfiRange`
+      const comp: number = !local ? 1 : !remote ? -1 : parser.compare(local.start, remote.start);
       if (comp === 0) {
         if (local.modified < remote.modified) {
           less = remote;
