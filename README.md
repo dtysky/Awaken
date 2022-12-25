@@ -12,6 +12,13 @@
 
 ![![]()]()
 
+## 应用包
+
+1. Windows：
+2. Mac：
+3. 安卓：
+4. iOS：99刀开发者账户好贵...先不传了，需要的自己编吧。
+
 ## 开发
 
 首先`Clone`整个仓库，初始化项目：
@@ -26,27 +33,85 @@ nom run init
 npm run dev
 ```
 
-然后查到**本机IP地址**，记`url = ${IP}:8888`，分平台处理：
+然后查到**本机IP地址**，记`DEV_URL = ${IP}:8888`，分平台处理：
 
 ### 桌面端
 
+在对应的操作系统上，执行一句命令即可：
 
+```sh
+npm run dev-desktop
+```
 
 ### 安卓端
 
+用最新的**Android Studio**打开**platform/android**下的工程，然后修改`MainActivity.kt`中的字段：
+
+```kotlin
+private val host: String = "http://${DEV_URL}"
+```
+
+接着连上设备调试即可。
+
 ### iOS端
 
+用**XCode**打开**platform/ios**下的工程，然后修改`ContentView.swift`中的字段：
+
+```kotlin
+let host: String = "http://${DEV_URL}"
+```
+
+接着连上设备调试即可。
+
+## 测试
+
+测试很简单，在主界面的**设定**中，填入以下配置：
+
+1. 地址：http://${IP}:8889/dav/
+2. 用户名：dtysky
+3. 密码：114514
+
+确认后即连接到本地调试服务器，接下来你可以在**test**目录中找到一些测试用书籍，来测试添加、删除、阅读等等功能。
 
 ## 发布
 
+发布首先要执行指令：
 
+```sh
+npm run build
+```
+
+然后分平台处理：
+
+### 桌面端
+
+直接执行：
+
+```sh
+npm run release-desktop
+```
+
+即可。如果只发布桌面端，也可以直接执行：
+
+```sh
+npm run release
+```
+
+产物在`platforms/desktop/target/release/bundle`中。
+
+### 安卓端
+
+打开项目工程，在`Build` -> `Select Build Variants`窗口，设置选择为`release`模式，然后`Build` -> `Make Project`即可。
+
+产物在`platforms/android/app/release`中。
+
+### iOS端
+
+打开项目工程，构建的`schema`选择`release`即可。
 
 ## todo
 
-移动端，默认选择文本后的弹窗
-
-自定义样式：
-各种样式配色
+1. 移动端，默认选择文本后的弹窗。
 
 ## Copyright
 
