@@ -198,7 +198,7 @@ export function Menu(props: IMenuProps) {
         <div className={css.about}>
           <img
             className={css.aboutLogo}
-            src={require('../assets/logo.png').default}
+            src={require('../assets/logo.png')}
           />
           <div className={css.aboutSlogan}>
             <p>作为演员的时候，</p>

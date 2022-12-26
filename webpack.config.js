@@ -59,12 +59,7 @@ module.exports = (env) => {
         },
         {
           test: /\.(png|jpg|webp|mp4)$/,
-          use: {
-            loader: 'url-loader',
-            options: {
-              limit: 15000
-            }
-          }
+          type: 'asset/resource'
         },
         {
           test: /\.(css|scss|sass)$/,
