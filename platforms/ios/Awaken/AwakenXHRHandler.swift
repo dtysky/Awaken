@@ -55,9 +55,8 @@ public class AwakenXHRHandler: NSObject, WKURLSchemeHandler {
                         httpVersion: nil, headerFields: headers
                     )!)
                     strongSelf.postResponse(to: urlSchemeTask, data: data!)
+                    strongSelf.postFinished(to: urlSchemeTask)
                 }
-                
-                strongSelf.postFinished(to: urlSchemeTask)
             })
             
             task.resume()

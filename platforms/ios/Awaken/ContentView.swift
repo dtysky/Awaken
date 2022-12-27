@@ -8,7 +8,7 @@
 import SwiftUI
 import WebKit
 
-let host: String = "http://192.168.2.204:8888"
+let host: String = "http://10.9.169.78:8888"
 
 struct ContentView: View {
     @State var bgColor: CGColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
