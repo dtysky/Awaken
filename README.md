@@ -1,7 +1,5 @@
 # Awaken
 
-移动端，连接错误crash
-
 ![](./src/frontend/assets/logo.png)
 
 一个多端同步阅读软件：
