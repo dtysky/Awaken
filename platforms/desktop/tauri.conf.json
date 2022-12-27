@@ -48,7 +48,7 @@
     },
     "bundle": {
       "active": true,
-      "category": "Books",
+      "category": "Education",
       "copyright": "LGPL",
       "deb": {
         "depends": []
