@@ -10,9 +10,13 @@
 
 **本项目不接任何需求，但是欢迎任何BUG修复或功能性的PR，当然那种什么代码不符合你的审美改改格式、改改先进的构建工具之类的还是算了，恕我懒得处理**。
 
-功能展示见：
+技术教程见：
 
-![![]()]()
+[Awaken-基于Hybrid方案和WebDAV的全平台开源阅读软件](https://zhuanlan.zhihu.com/p/594798266)
+
+功能展示见视频：
+
+[![](./cover.jpg)](https://www.bilibili.com/video/BV1uD4y1j79i/)
 
 ## 应用包
 
