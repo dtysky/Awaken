@@ -10,17 +10,19 @@
 
 **本项目不接任何需求，但是欢迎任何BUG修复或功能性的PR，当然那种什么代码不符合你的审美改改格式、改改先进的构建工具之类的还是算了，恕我懒得处理**。
 
-功能展示见：
+技术教程见：
 
-![![]()]()
+[Awaken-基于Hybrid方案和WebDAV的全平台开源阅读软件](https://zhuanlan.zhihu.com/p/594798266)
+
+功能展示见视频：
+
+[![](./cover.jpg)](https://www.bilibili.com/video/BV1uD4y1j79i/)
 
 ## 应用包
 
-1. Windows：
-2. Mac：
-3. 安卓：
-4. iOS：99刀开发者账户好贵而且审核好麻烦...容我犹豫一下，需要的先自己编吧。
-5. Linux：手头没Linux系统的设备，不过Linux的用户们自己编一个轻轻松松吧，加油。
+1. Windows(msi)/Mac(dmg)/安卓(apk)，解压ZIP都在里面：[awaken_1.0.0.zip](https://github.com/dtysky/Awaken/files/10308780/awaken_1.0.0.zip)
+2. iOS：99刀开发者账户好贵而且审核好麻烦...容我犹豫一下，需要的先自己编吧。
+3. Linux：手头没Linux系统的设备，不过Linux的用户们自己编一个轻轻松松吧，加油。
 
 ## 开发
 
