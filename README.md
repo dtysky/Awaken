@@ -29,8 +29,10 @@
 首先`Clone`整个仓库，初始化项目：
 
 ```sh
-nom run init
+npm run init
 ```
+
+>需要用其他包管理工具的注意加上`--force`，赖得处理UIKit的React版本冲突了...
 
 接着运行开发指令：
 
@@ -125,4 +127,4 @@ npm run release
 ## Copyright
 
 **Copyright © 2022, 戴天宇, Tianyu Dai (dtysky < dtysky@outlook.com >). All Rights Reserved.**  
-**This project is free software and released under the** [GNU Lesser General Public License (LGPL)](https://www.gnu.org/licenses/lgpl-3.0.en.html).**
+**This project is free software and released under the** [GNU Lesser General Public License (LGPL)](https://www.gnu.org/licenses/lgpl-3.0.en.html).
