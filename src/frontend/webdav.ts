@@ -54,7 +54,7 @@ class WebDAV {
     } catch (error) {
       console.error(error)
       this._client = undefined;
-      throw new Error(`无法连接已保存的服务器，可能是服务器无效或被屏蔽，请检查。`);
+      throw new Error(`无法连接已保存的服务器，可能是服务器无效或被屏蔽，请检查：${error.message || error}`);
     }
   }
 
@@ -209,7 +209,7 @@ class WebDAV {
         await fs.writeFile('books.json', booksStr, 'Books');
       } catch (error) {
         console.error(error)
-        bk.worker.showMessage(`同步到远端出错，可手动再次发起同步！`, 'warning');
+        bk.worker.showMessage(`同步到远端出错，可手动再次发起同步：${error.message || error}`, 'warning');
       } 
     }
 

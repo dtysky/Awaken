@@ -130,7 +130,7 @@ export default function App() {
               }
 
               if (invalid.length) {
-                bk.worker.showMessage(invalid.join('\n'), 'warning', '以下书籍添加报错');
+                bk.worker.showMessage(invalid.join('\n'), 'error', '以下书籍添加报错');
               }
             }
 

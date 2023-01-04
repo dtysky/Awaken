@@ -1,6 +1,6 @@
 {
   "name": "awaken",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "private": true,
   "devDependencies": {
@@ -35,7 +35,7 @@
     "copy-android": "d=platforms/android/app/src/main/assets && rm -rf $d && mkdir $d && cp dist/* $d",
     "copy-ios": "d=platforms/ios/Awaken/assets && rm -rf $d && mkdir $d && cp dist/* $d",
     "build": "rm -rf dist && webpack --config webpack.config.js --env production=true && npm run copy-desktop && npm run copy-android && npm run copy-ios",
-    "release-desktop": "cd ./platforms/desktop && tauri build",
+    "release-desktop": "cd ./platforms/desktop && tauri build --debug",
     "release": "npm run build && npm run release-desktop"
   },
   "author": {
