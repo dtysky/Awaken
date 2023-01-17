@@ -20,11 +20,14 @@
 
 ## 应用包
 
-1. Windows(msi)/Mac(dmg)/安卓(apk)，解压ZIP都在里面：[awaken_1.0.0.zip](https://github.com/dtysky/Awaken/files/10308780/awaken_1.0.0.zip)
-2. iOS：99刀开发者账户好贵而且审核好麻烦...容我犹豫一下，需要的先自己编吧。
-3. Linux：手头没Linux系统的设备，不过Linux的用户们自己编一个轻轻松松吧，加油。
+详见[Change Log](./CHANGELOG.md)。
 
 ## 开发
+
+前置需求：
+
+1. NodeJS v16以及以上
+2. Rust环境
 
 首先`Clone`整个仓库，初始化项目：
 

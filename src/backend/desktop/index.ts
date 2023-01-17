@@ -127,6 +127,12 @@ export const worker: IWorker = {
     async readFile(filePath: string, encoding: 'utf8' | 'binary', baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);
 
+      if (baseDir === 'Books') {
+        const bp = tauri.convertFileSrc(fp);
+        const res = await fetch(bp);
+        return encoding === 'utf8' ? res.text() : res.arrayBuffer();
+      }
+
       return encoding === 'utf8' ?
         fs.readTextFile(fp, base && {dir: base}) as Promise<string> :
         (await fs.readBinaryFile(fp, base && {dir: base})).buffer;
@@ -160,8 +166,13 @@ export const worker: IWorker = {
       const list = await fs.readDir(fp, {dir: base, recursive: true});
 
       return list.map(entity => {
+        let p = entity.path.replace(realBase, '').replace(dirPath, '');
+        if (p.startsWith('\\') || p.startsWith('/')) {
+          p = p.substring(1)
+        }
+
         return {
-          path: entity.path.replace(realBase, '').replace(dirPath, ''),
+          path: p,
           isDir: !!entity.children?.length
         };
       });

@@ -24,7 +24,6 @@
 
 .menuItem {
   margin: 0 0.3rem;
-  // color: #4c9;
   color: #444;
   font-size: 1rem;
   padding: 1rem 0.6rem;
@@ -39,6 +38,8 @@
   width: 90%;
   left: 5%;
   top: 4rem;
+  padding-bottom: 2rem;
+  overflow: auto;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;

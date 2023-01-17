@@ -208,7 +208,7 @@ export function Menu(props: IMenuProps) {
           </div>
           <p className={css.aboutLinks}>
             <a href="https://github.com/dtysky/Awaken" target='_blank'>项目主页</a>
-            <a href="https://github.com/dtysky/Awaken/releases" target='_blank'>检查更新</a>
+            <a href="https://github.com/dtysky/Awaken/blob/master/CHANGELOG.md" target='_blank'>检查更新</a>
           </p>
 
           <div className={css.aboutCopyright}>
