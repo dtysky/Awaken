@@ -3,8 +3,8 @@
 ## 安装包
 
 1. Windows(msi)：[Awaken_1.0.1.msi.zip](https://github.com/dtysky/Awaken/files/10436935/Awaken_1.0.1.msi.zip)
-2. Mac(dmg)：等待更新
-3. 安卓(apk)：[awaken_1.0.1.apk.zip](https://github.com/dtysky/Awaken/files/10436942/awaken_1.0.1.apk.zip)
+2. Mac(dmg)：[Awaken_1.0.1.dmg.zip](https://github.com/dtysky/Awaken/files/10442243/Awaken_1.0.1.dmg.zip)
+3. 安卓(apk)：[Awaken_1.0.1.apk.zip](https://github.com/dtysky/Awaken/files/10436942/awaken_1.0.1.apk.zip)
 4. iOS：99刀开发者账户好贵而且审核好麻烦...我自己用安卓不想花这钱，有需求的先自己编吧。
 5. Linux：手头没Linux系统的设备，不过Linux的用户们自己编一个轻轻松松吧，加油。
 
