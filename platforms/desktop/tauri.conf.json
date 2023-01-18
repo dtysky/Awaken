@@ -80,7 +80,7 @@
       }
     },
     "security": {
-      "csp": "default-src blob: https: http:; img-src blob: https: http: asset: https://asset.localhost; style-src blob: https: http: 'unsafe-inline'"
+      "csp": "default-src blob: https: http: tauri: asset:; img-src blob: https: http: tauri: asset:; style-src blob: https: http: tauri: asset: 'unsafe-inline'"
     },
     "updater": {
       "active": false
