@@ -5,26 +5,37 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Message
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import android.webkit.*
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import java.io.ByteArrayInputStream
+import android.view.GestureDetector
+import android.view.MotionEvent
+import kotlin.math.abs
 
 
 class MainActivity : AppCompatActivity() {
     var mainWebView: AwakenWebView? = null
+    private lateinit var gestureDetector: GestureDetector
     private var jsb: AwakenJSB? = null
     private var selectFilesCallback: ((files: Array<String>) -> Unit)? = null
-    private val host: String = "http://192.168.2.208:8888"
+    private val host: String = "http://localhost:8888"
     private val headers: HashMap<String, String> = hashMapOf(
         "Access-Control-Allow-Headers" to "*",
         "Access-Control-Allow-Origin" to "*",
         "Access-Control-Allow-Methods" to "*",
         "Access-Control-Expose-Headers" to "DAV, Content-Type, Allow, WWW-Authenticate"
     )
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +48,20 @@ class MainActivity : AppCompatActivity() {
         mainWebView = findViewById(R.id.main)
         initWebViewSetting(mainWebView)
         jsb = AwakenJSB(this)
+
+        // 初始化手势检测器
+        gestureDetector = GestureDetector(this, GestureListener())
+
+        // 将手势监听器应用到 WebView 上
+        mainWebView?.setOnTouchListener { v, event ->
+            val isGestureDetected = gestureDetector.onTouchEvent(event)
+            if (!isGestureDetected) {
+                v.performClick()  // 处理点击事件
+                return@setOnTouchListener false
+            }
+            true
+        }
+
         mainWebView?.addJavascriptInterface(jsb!!,"Awaken")
         mainWebView?.loadUrl(if (BuildConfig.DEBUG) { host } else { "http://awaken.api" })
     }
@@ -147,6 +172,78 @@ class MainActivity : AppCompatActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         hideStatusAndTitleBar()
+    }
+
+    // 手势监听器
+    inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
+        private val SWIPE_THRESHOLD = 100  // 滑动的最小距离
+        private val SWIPE_VELOCITY_THRESHOLD = 100  // 滑动的最小速度
+
+        override fun onFling(
+            e1: MotionEvent?,
+            e2: MotionEvent?,
+            velocityX: Float,
+            velocityY: Float
+        ): Boolean {
+            try {
+                val diffX = e2?.x?.minus(e1!!.x) ?: 0f
+                val diffY = e2?.y?.minus(e1!!.y) ?: 0f
+
+                if (abs(diffX) > abs(diffY)) {
+                    // 水平滑动
+                    if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                        if (diffX > 0) {
+                            // 右滑，上一页
+                            onSwipeRight()
+                        } else {
+                            // 左滑，下一页
+                            onSwipeLeft()
+                        }
+                        return true
+                    }
+                }
+            } catch (exception: Exception) {
+                exception.printStackTrace()
+            }
+            return false
+        }
+    }
+
+    // 处理左滑事件，下一页
+    private fun onSwipeLeft() {
+        mainWebView?.evaluateJavascript(
+            "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight'})); })();",
+            null
+        )
+    }
+
+    // 处理右滑事件，上一页
+    private fun onSwipeRight() {
+        mainWebView?.evaluateJavascript(
+            "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft'})); })();",
+            null
+        )
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        mainWebView?.let {
+            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                // 触发上一页的翻页
+                it.evaluateJavascript(
+                    "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft'})); })();",
+                    null
+                )
+                return true
+            } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                // 触发下一页的翻页
+                it.evaluateJavascript(
+                    "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight'})); })();",
+                    null
+                )
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     private fun hideStatusAndTitleBar() {
