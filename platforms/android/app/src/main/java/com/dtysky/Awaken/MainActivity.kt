@@ -5,20 +5,29 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Message
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import android.webkit.*
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import java.io.ByteArrayInputStream
-
+import android.view.GestureDetector
+import android.view.MotionEvent
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
     var mainWebView: AwakenWebView? = null
+    private lateinit var gestureDetector: GestureDetector
     private var jsb: AwakenJSB? = null
     private var selectFilesCallback: ((files: Array<String>) -> Unit)? = null
-    private val host: String = "http://192.168.2.208:8888"
+    private val host: String = "http://192.168.1.128:8888"
     private val headers: HashMap<String, String> = hashMapOf(
         "Access-Control-Allow-Headers" to "*",
         "Access-Control-Allow-Origin" to "*",
@@ -37,7 +46,16 @@ class MainActivity : AppCompatActivity() {
         mainWebView = findViewById(R.id.main)
         initWebViewSetting(mainWebView)
         jsb = AwakenJSB(this)
-        mainWebView?.addJavascriptInterface(jsb!!,"Awaken")
+
+        // 初始化手势检测器
+        gestureDetector = GestureDetector(this, GestureListener())
+
+        mainWebView?.setOnTouchListener { v, event ->
+            gestureDetector.onTouchEvent(event)
+            false  // 始终返回 false，让 WebView 继续处理触摸事件
+        }
+
+        mainWebView?.addJavascriptInterface(jsb!!, "Awaken")
         mainWebView?.loadUrl(if (BuildConfig.DEBUG) { host } else { "http://awaken.api" })
     }
 
@@ -52,7 +70,7 @@ class MainActivity : AppCompatActivity() {
             settings.javaScriptCanOpenWindowsAutomatically = BuildConfig.DEBUG
             settings.setSupportMultipleWindows(true)
 
-            webViewClient = object: WebViewClient() {
+            webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                     request?.run {
                         if (request.method == "OPTIONS") {
@@ -63,8 +81,8 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         if (url.host.equals("awaken.api")) {
-                            var method: String = url.path.toString().substring(1)
-                            var params: MutableMap<String, String> = mutableMapOf(
+                            val method: String = url.path.toString().substring(1)
+                            val params: MutableMap<String, String> = mutableMapOf(
                                 "method" to request.method
                             )
                             url.queryParameterNames.forEach {
@@ -116,7 +134,7 @@ class MainActivity : AppCompatActivity() {
             if (resultCode != RESULT_OK) {
                 selectFilesCallback?.invoke(arrayOf())
             } else {
-                resultData?.data?.also {uri ->
+                resultData?.data?.also { uri ->
                     selectFilesCallback?.invoke(arrayOf(uri.toString()))
                 }
             }
@@ -149,6 +167,79 @@ class MainActivity : AppCompatActivity() {
         hideStatusAndTitleBar()
     }
 
+    // 手势监听器
+    inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
+        private val SWIPE_THRESHOLD = 100  // 滑动的最小距离
+        private val SWIPE_VELOCITY_THRESHOLD = 100  // 滑动的最小速度
+
+        override fun onFling(
+            e1: MotionEvent?,
+            e2: MotionEvent?,
+            velocityX: Float,
+            velocityY: Float
+        ): Boolean {
+            try {
+                val diffX = e2?.x?.minus(e1!!.x) ?: 0f
+                val diffY = e2?.y?.minus(e1!!.y) ?: 0f
+
+                // 添加条件，只有水平滑动时才触发左右翻页
+                if (abs(diffX) > abs(diffY)) {
+                    // 水平滑动
+                    if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                        if (diffX > 0) {
+                            // 右滑，上一页
+                            onSwipeRight()
+                        } else {
+                            // 左滑，下一页
+                            onSwipeLeft()
+                        }
+                        return true
+                    }
+                }
+            } catch (exception: Exception) {
+                exception.printStackTrace()
+            }
+            return false
+        }
+    }
+
+    // 处理左滑事件，下一页
+    private fun onSwipeLeft() {
+        mainWebView?.evaluateJavascript(
+            "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight'})); })();",
+            null
+        )
+    }
+
+    // 处理右滑事件，上一页
+    private fun onSwipeRight() {
+        mainWebView?.evaluateJavascript(
+            "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft'})); })();",
+            null
+        )
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        mainWebView?.let {
+            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                // 触发上一页的翻页
+                it.evaluateJavascript(
+                    "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft'})); })();",
+                    null
+                )
+                return true
+            } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                // 触发下一页的翻页
+                it.evaluateJavascript(
+                    "javascript:(function() { window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight'})); })();",
+                    null
+                )
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     private fun hideStatusAndTitleBar() {
         supportActionBar?.hide()
 
@@ -157,7 +248,7 @@ class MainActivity : AppCompatActivity() {
 
         val decorView = window.decorView
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowInsetsController = decorView.getWindowInsetsController()
+            val windowInsetsController = decorView.windowInsetsController
                 ?: return
             windowInsetsController.systemBarsBehavior =
                 WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
