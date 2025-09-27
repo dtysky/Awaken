@@ -5,14 +5,16 @@
  * @Date   : 2022/9/16 23:12:38
  */
 import * as React from 'react';
-import {ButtonGroup, Button, Modal, Form, FormItem, Text, FormGroup} from 'hana-ui';
+import { ButtonGroup, Button, Modal, Form, FormItem, Text, FormGroup, Sidebar, MenuItem, Icon } from 'hana-ui';
 
 import bk from '../../backend';
-import {ISystemSettings} from '../../interfaces';
-import {selectBook, selectFolder} from '../utils';
+import { ISystemSettings } from '../../interfaces';
+import { selectBook, selectFolder } from '../utils';
 import css from '../styles/books.module.scss';
 
 interface IMenuProps {
+  bookshelfListState: [string[], React.Dispatch<React.SetStateAction<string[]>>];
+  selectedBookshelfState: [string, React.Dispatch<React.SetStateAction<string>>];
   settings: ISystemSettings;
   onUpdateSettings(settings: ISystemSettings): void;
   onAddBooks(files: string[]): void;
@@ -25,6 +27,11 @@ export function Menu(props: IMenuProps) {
   const [showConfirm, setShowConfirm] = React.useState<boolean>(false);
   const [confirmText, setConfirmText] = React.useState<string[]>([]);
   const [showAbout, setShowAbout] = React.useState<boolean>(false);
+  const [showBookshelf, setShowBookshelf] = React.useState<boolean>(false);
+  const [showAddBookshelf, setShowAddBookshelf] = React.useState<boolean>(false);
+  const [newBookshelfName, setNewBookshelfName] = React.useState<string>('');
+  const [bookshelfList, setBookshelfList] = props.bookshelfListState;
+  const [selectedBookshelf, setSelectedBookshelf] = props.selectedBookshelfState;
   const forceUpdate: () => void = React.useState({})[1].bind(null, {})
 
   return (
@@ -47,7 +54,7 @@ export function Menu(props: IMenuProps) {
         <Button
           className={css.menuItem}
           icon={'reuse'}
-          iconStyle={{fontSize: '0.9rem'}}
+          iconStyle={{ fontSize: '0.9rem' }}
           onClick={props.onSync}
         >
           同步
@@ -73,6 +80,13 @@ export function Menu(props: IMenuProps) {
           onClick={() => setShowAbout(true)}
         >
           关于
+        </Button>
+        <Button
+          className={css.menuItem}
+          icon={'menu'}
+          onClick={() => setShowBookshelf(n => !n)}
+        >
+          书架
         </Button>
       </ButtonGroup>
 
@@ -103,7 +117,7 @@ export function Menu(props: IMenuProps) {
           }
         }}
         cancel={() => setShowConfig(false)}
-        style={{with: '60%'}}
+        style={{ with: '60%' }}
       >
         {
           settings && (
@@ -114,7 +128,7 @@ export function Menu(props: IMenuProps) {
                     <FormItem status='normal'>
                       <Text value={settings.folder} disabled />
                     </FormItem>
-        
+
                     <FormItem>
                       <Button
                         onClick={() => {
@@ -132,8 +146,8 @@ export function Menu(props: IMenuProps) {
                   </FormGroup>
                 )
               }
-    
-              <FormGroup label="WebDAV" elementStyle={{flexFlow: 'column'}}>
+
+              <FormGroup label="WebDAV" elementStyle={{ flexFlow: 'column' }}>
                 <FormItem label="地址" status='normal'>
                   <Text
                     defaultValue={settings.webDav.url}
@@ -153,7 +167,7 @@ export function Menu(props: IMenuProps) {
                     }}
                   />
                 </FormItem>
-    
+
                 <FormItem label="密码" status='normal'>
                   <Text
                     defaultValue={settings.webDav.password}
@@ -165,7 +179,7 @@ export function Menu(props: IMenuProps) {
                   />
                 </FormItem>
               </FormGroup>
-            </Form>   
+            </Form>
           )
         }
       </Modal>
@@ -180,8 +194,8 @@ export function Menu(props: IMenuProps) {
           setShowConfirm(false);
         }}
         cancel={() => setShowConfirm(false)}
-        titleStyle={{color: 'red'}}
-        contentStyle={{color: 'red'}}
+        titleStyle={{ color: 'red' }}
+        contentStyle={{ color: 'red' }}
       >
         {
           confirmText.map(t => (
@@ -217,6 +231,60 @@ export function Menu(props: IMenuProps) {
             <p>本软件为自由软件，遵循协议</p>
             <a href="https://www.gnu.org/licenses/lgpl-3.0.html" target='_blank'>GNU Lesser General Public License (LGPL)</a>
           </div>
+        </div>
+      </Modal>
+      <Sidebar
+        open={showBookshelf}
+        style={{ width: '300px' }}
+      >
+        <button
+          className={`${css.bookshelfButton} ${selectedBookshelf ? '' : css.bookshelfButtonActive}`}
+          onClick={() => setSelectedBookshelf(null)}
+        >默认书架</button>
+        {bookshelfList.map(bookshelfName => (
+          <button
+            className={`${css.bookshelfButton} ${selectedBookshelf === bookshelfName ? css.bookshelfButtonActive : ''}`}
+            key={bookshelfName}
+            onClick={() => setSelectedBookshelf(bookshelfName)}
+          >{bookshelfName}</button>
+        ))}
+        <button
+          className={css.bookshelfButton}
+          style={{ borderBottom: 'none' }}
+          onClick={() => {
+            setShowAddBookshelf(true);
+          }}
+        >
+          <Icon type='plus' style={{ marginRight: '0.5rem' }} />
+          添加书架
+        </button>
+      </Sidebar>
+      <Modal
+        show={showAddBookshelf}
+        confirm={() => {
+          if (newBookshelfName.trim().length) {
+            if (bookshelfList.indexOf(newBookshelfName) >= 0 || newBookshelfName === '默认书架') {
+              alert('书架已存在！');
+              return;
+            }
+            setBookshelfList([...bookshelfList, newBookshelfName]);
+            setNewBookshelfName('');
+            setShowAddBookshelf(false);
+          }
+        }}
+        cancel={() => {
+          setShowAddBookshelf(false);
+          setNewBookshelfName('');
+        }}
+      >
+        <div>
+          <h3>添加书架</h3>
+          <hr />
+          <p>请输入书架名称</p>
+          <Text
+            value={newBookshelfName}
+            onChange={(e, _) => setNewBookshelfName((e.target as any).value)}
+          />
         </div>
       </Modal>
     </>

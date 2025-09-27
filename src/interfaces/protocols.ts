@@ -43,4 +43,8 @@ export interface IBookConfig {
   notes: IBookNote[];
   // only remote
   removedTs?: {[cfi: string]: number};
+  bookshelf?: {
+    value: string | null;
+    ts: number;
+  };
 }
