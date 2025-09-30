@@ -299,32 +299,34 @@ class WebDAV {
     local.lastProgress = localTS > remoteTS ? local.lastProgress : remote.lastProgress;
     local.notes = this._mergeNotes(local.notes, remote.notes, remote.removedTs);
     local.bookmarks = this._mergeNotes(local.bookmarks, remote.bookmarks, remote.removedTs);
-    const localBookshelfTS = local.bookshelf?.ts || 0;
-    const remoteBookshelfTS = remote.bookshelf?.ts || 0;
-    local.bookshelf = localBookshelfTS > remoteBookshelfTS ? local.bookshelf : remote.bookshelf;
 
     return local;
   }
   
-  public async syncBookshelf(book: IBook, config?: IBookConfig): Promise<string | null> {
-    if (!config) {
-      config = JSON.parse(await bk.worker.fs.readFile(`${book.hash}/config.json`, 'utf8', 'Books') as string);
+  public async syncBookshelf(books?: IBook[]): Promise<Array<string | null>> {
+    if (!books) {
+      books = JSON.parse(await bk.worker.fs.readFile('books.json', 'utf8', 'Books') as string);
     }
     if (this.connected) {
-      const remote = JSON.parse(await this._client.getFileContents(getRemote(`${book.hash}/config.json`), {format: 'text'}) as string);
-      if (remote.bookshelf !== config.bookshelf) {
-        const localBookshelfTS = config.bookshelf?.ts || 0;
-        const remoteBookshelfTS = remote.bookshelf?.ts || 0;
-        if (remoteBookshelfTS > localBookshelfTS) {
-          config.bookshelf = remote.bookshelf;
-          await bk.worker.fs.writeFile(`${book.hash}/config.json`, JSON.stringify(config), 'Books');
-        } else if (remoteBookshelfTS < localBookshelfTS) {
-          remote.bookshelf = config.bookshelf;
-          await this._client.putFileContents(getRemote(`${book.hash}/config.json`), JSON.stringify(remote), {overwrite: true});
+      const remote = JSON.parse(await this._client.getFileContents(getRemote('books.json'), {format: 'text'}) as string);
+      const remoteTable: {[hash: string]: IBook} = {};
+      remote.forEach(book => remoteTable[book.hash] = book);
+      books.forEach(book => {
+        const remoteBook = remoteTable[book.hash];
+        if (remoteBook && remoteBook.bookshelf) {
+          const localTS = book.ts || 0;
+          const remoteTS = remoteBook.ts || 0;
+          if (remoteTS > localTS) {
+            book.bookshelf = remoteBook.bookshelf;
+          } else {
+            remoteBook.bookshelf = book.bookshelf;
+          }
         }
-      }
+      });
+      await this._client.putFileContents(getRemote('books.json'), JSON.stringify(books), {overwrite: true});
     }
-    return config.bookshelf ? config.bookshelf.value : null;
+    await bk.worker.fs.writeFile('books.json', JSON.stringify(books), 'Books');
+    return books.map(book => book.bookshelf?.value || null);
   }
 
   private _mergeNotes(localNotes: IBookNote[], remoteNotes: IBookNote[], removedTs: {[cfi: string]: number}): IBookNote[] {

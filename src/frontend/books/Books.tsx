@@ -17,9 +17,9 @@ import css from '../styles/books.module.scss';
 import webdav from '../webdav';
 
 export interface IBooksProps {
-  bookshelfMapState: [{ [hash: string]: string }, React.Dispatch<React.SetStateAction<{ [hash: string]: string }>>];
+  bookshelfList: [string[], React.Dispatch<React.SetStateAction<string[]>>];
   settings: ISystemSettings;
-  books: IBook[];
+  books: [IBook[], React.Dispatch<React.SetStateAction<IBook[]>>];
   onSelect(index: number): void;
   onUpdateSettings(config: ISystemSettings): void;
   onAddBooks(files: string[]): void;
@@ -35,12 +35,8 @@ export default function Books(props: IBooksProps) {
   const [addToBookshelfBook, setAddToBookshelfBook] = React.useState<string>();
   const [bookAddToBookshelf, setBookAddToBookshelf] = React.useState<IBook>();
   const [selectedBookshelf, setSelectedBookshelf] = React.useState<string>(null);
-  const [bookshelfMap, setBookshelfMap] = props.bookshelfMapState;
-  const [bookshelfList, setBookshelfList] = React.useState<string[]>(Array.from(new Set(props.books.map(b => bookshelfMap[b.hash]).filter(bs => !!bs))));
-
-  React.useEffect(() => {
-    setBookshelfList(Array.from(new Set(props.books.map(b => bookshelfMap[b.hash]).filter(bs => !!bs))));
-  }, [props.books, bookshelfMap]);
+  const [bookshelfList, setBookshelfList] = props.bookshelfList;
+  const [books, setBooks] = props.books;
 
   return (
     <div className={css.books}>
@@ -53,7 +49,7 @@ export default function Books(props: IBooksProps) {
         onSync={props.onSync}
       />
       <div className={css.list}>
-        {props.books.map((book, index) => !book.removed && (bookshelfMap[book.hash] == selectedBookshelf) && (
+        {books.map((book, index) => !book.removed && (book.bookshelf?.value == selectedBookshelf) && (
           <Book
             key={book.hash}
             book={book}
@@ -115,28 +111,18 @@ export default function Books(props: IBooksProps) {
             }
 
             if (bookAddToBookshelf && addToBookshelfBook) {
-              config.ts = Date.now();
-              if (addToBookshelfBook === '默认书架') {
-                config.bookshelf = {
-                  value: null,
-                  ts: Date.now()
+              const updatedBooks = [
+                ...books.filter(b => b.hash !== bookAddToBookshelf.hash),
+                {
+                  ...bookAddToBookshelf,
+                  bookshelf: {
+                    value: addToBookshelfBook === '默认书架' ? null : addToBookshelfBook,
+                    ts: Date.now()
+                  }
                 }
-                setBookshelfMap(m => ({
-                  ...m,
-                  [bookAddToBookshelf.hash]: null
-                }));
-              } else {
-                config.bookshelf = {
-                  value: addToBookshelfBook,
-                  ts: Date.now()
-                };
-                setBookshelfMap(m => ({
-                  ...m,
-                  [bookAddToBookshelf.hash]: addToBookshelfBook
-                }));
-              }
-              await bk.worker.fs.writeFile(configPath, JSON.stringify(config), 'Books');
-              await webdav.syncBookshelf(bookAddToBookshelf, config);
+              ];
+              setBooks(updatedBooks);
+              await webdav.syncBookshelf(updatedBooks);
             }
           } catch (e) {
             console.error(e);

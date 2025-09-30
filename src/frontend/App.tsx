@@ -30,28 +30,7 @@ export default function App() {
   const [current, setCurrent] = React.useState<number>(0);
   const [loadingInfo, setLoadingInfo] = React.useState<string>();
   const [showModal, setShowModal] = React.useState<boolean>(false);
-  const [bookshelfMap, setBookshelfMap] = React.useState<{ [hash: string]: string }>({});
-
-  const loadAllBookshelves = async (books: IBook[]): Promise<{ [hash: string]: string }> => {
-    const shelves: { [hash: string]: string } = {};
-
-    for (const book of books) {
-      if (book.removed) {
-        continue;
-      }
-
-      try {
-        const bookshelf = await webdav.syncBookshelf(book);
-
-        shelves[book.hash] = bookshelf;
-      } catch (error) {
-        console.warn(`Failed to load bookshelf for book ${book.name}:`, error);
-        shelves[book.hash] = null;
-      }
-    }
-
-    return shelves;
-  };
+  const [bookshelfList, setBookshelfList] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -81,8 +60,8 @@ export default function App() {
             setBooks(bks);
             setState('Books');
             setLoadingInfo('加载书架信息...');
-            loadAllBookshelves(bks || []).then(m => {
-              setBookshelfMap(m);
+            webdav.syncBookshelf().then(bsList => {
+              setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
               setLoadingInfo('');
             });
             if (s.webDav.url) {
@@ -104,9 +83,9 @@ export default function App() {
       )}
       {state === 'Books' && (
         <Books
-          bookshelfMapState={[bookshelfMap, setBookshelfMap]}
+          bookshelfList={[bookshelfList, setBookshelfList]}
           settings={settings}
-          books={books}
+          books={[books, setBooks]}
           onSelect={async index => {
             setLoadingInfo('书籍打开中...');
             try {
@@ -135,8 +114,10 @@ export default function App() {
 
               setBooks(bks);
               setLoadingInfo('加载书架信息...');
-              setBookshelfMap(await loadAllBookshelves(bks || []));
-              setLoadingInfo('');
+              webdav.syncBookshelf().then(bsList => {
+                setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
+                setLoadingInfo('');
+              });
             } catch (error) {
               bk.worker.showMessage(`${error.message || error}`, 'error');
               setLoadingInfo('');
@@ -274,8 +255,10 @@ export default function App() {
             const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
             setBooks(bks);
             setLoadingInfo('加载书架信息...');
-            setBookshelfMap(await loadAllBookshelves(bks || []));
-            setLoadingInfo('');
+            webdav.syncBookshelf().then(bsList => {
+              setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
+              setLoadingInfo('');
+            });
           } catch (error) {
             bk.worker.showMessage(`${error.message || error}`, 'error');
             setLoadingInfo('');

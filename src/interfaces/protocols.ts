@@ -14,6 +14,10 @@ export interface IBook {
   ts: number;
   removed?: boolean;
   cover?: string;
+  bookshelf?: {
+    value: string | null;
+    ts: number;
+  };
 }
 
 // highlights and annotations
@@ -42,9 +46,5 @@ export interface IBookConfig {
   bookmarks: IBookNote[];
   notes: IBookNote[];
   // only remote
-  removedTs?: {[cfi: string]: number};
-  bookshelf?: {
-    value: string | null;
-    ts: number;
-  };
+  removedTs?: { [cfi: string]: number };
 }
