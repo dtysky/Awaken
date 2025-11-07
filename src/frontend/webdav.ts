@@ -302,6 +302,32 @@ class WebDAV {
 
     return local;
   }
+  
+  public async syncBookshelf(books?: IBook[]): Promise<Array<string | null>> {
+    if (!books) {
+      books = JSON.parse(await bk.worker.fs.readFile('books.json', 'utf8', 'Books') as string);
+    }
+    if (this.connected) {
+      const remote = JSON.parse(await this._client.getFileContents(getRemote('books.json'), {format: 'text'}) as string);
+      const remoteTable: {[hash: string]: IBook} = {};
+      remote.forEach(book => remoteTable[book.hash] = book);
+      books.forEach(book => {
+        const remoteBook = remoteTable[book.hash];
+        if (remoteBook && remoteBook.bookshelf) {
+          const localTS = book.ts || 0;
+          const remoteTS = remoteBook.ts || 0;
+          if (remoteTS > localTS) {
+            book.bookshelf = remoteBook.bookshelf;
+          } else {
+            remoteBook.bookshelf = book.bookshelf;
+          }
+        }
+      });
+      await this._client.putFileContents(getRemote('books.json'), JSON.stringify(books), {overwrite: true});
+    }
+    await bk.worker.fs.writeFile('books.json', JSON.stringify(books), 'Books');
+    return books.map(book => book.bookshelf?.value || null);
+  }
 
   private _mergeNotes(localNotes: IBookNote[], remoteNotes: IBookNote[], removedTs: {[cfi: string]: number}): IBookNote[] {
     const res: IBookNote[] = [];

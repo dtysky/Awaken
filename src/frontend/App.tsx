@@ -5,18 +5,18 @@
  * @Date   : 2022/9/16 23:07:42
  */
 import * as React from 'react';
-import {Loading, Modal} from 'hana-ui';
+import { Loading, Modal } from 'hana-ui';
 
 import bk from '../backend';
 import Reader from './reader/Reader';
-import {IBook} from '../interfaces/protocols';
+import { IBook, IBookConfig } from '../interfaces/protocols';
 import Books from './books/Books';
 import {
   loadSettings, saveSettings, loadBooks,
   selectFolder, selectNote
 } from './utils';
 import webdav from './webdav';
-import {ISystemSettings} from '../interfaces';
+import { ISystemSettings } from '../interfaces';
 
 import css from './styles/app.module.scss';
 import './styles/global.scss';
@@ -30,6 +30,7 @@ export default function App() {
   const [current, setCurrent] = React.useState<number>(0);
   const [loadingInfo, setLoadingInfo] = React.useState<string>();
   const [showModal, setShowModal] = React.useState<boolean>(false);
+  const [bookshelfList, setBookshelfList] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (state === 'Init') {
@@ -57,9 +58,12 @@ export default function App() {
           })
           .then(bks => {
             setBooks(bks);
-            setLoadingInfo('');
             setState('Books');
-
+            setLoadingInfo('加载书架信息...');
+            webdav.syncBookshelf().then(bsList => {
+              setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
+              setLoadingInfo('');
+            });
             if (s.webDav.url) {
               setShowModal(true);
             }
@@ -67,24 +71,25 @@ export default function App() {
           .catch(error => {
             bk.worker.showMessage(`初始化失败：${error.message}`, 'error');
           });
-      }) 
-    }
+        })
+      }
   });
 
   return (
     <div className={css.app}>
       {state === 'Loading' && (
         <div className={css.loading}>
-        </div>  
+        </div>
       )}
       {state === 'Books' && (
         <Books
+          bookshelfList={[bookshelfList, setBookshelfList]}
           settings={settings}
-          books={books}
+          books={[books, setBooks]}
           onSelect={async index => {
             setLoadingInfo('书籍打开中...');
             try {
-              await webdav.checkAndDownloadBook(books[index], setLoadingInfo); 
+              await webdav.checkAndDownloadBook(books[index], setLoadingInfo);
               setCurrent(index);
               setState('Reader');
               setLoadingInfo('');
@@ -104,10 +109,15 @@ export default function App() {
               if (!webdav.connected) {
                 await webdav.changeRemote(settings.webDav);
               }
-  
+
               const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+
               setBooks(bks);
-              setLoadingInfo('');
+              setLoadingInfo('加载书架信息...');
+              webdav.syncBookshelf().then(bsList => {
+                setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
+                setLoadingInfo('');
+              });
             } catch (error) {
               bk.worker.showMessage(`${error.message || error}`, 'error');
               setLoadingInfo('');
@@ -244,7 +254,11 @@ export default function App() {
             await webdav.changeRemote(settings.webDav);
             const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
             setBooks(bks);
-            setLoadingInfo('');
+            setLoadingInfo('加载书架信息...');
+            webdav.syncBookshelf().then(bsList => {
+              setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
+              setLoadingInfo('');
+            });
           } catch (error) {
             bk.worker.showMessage(`${error.message || error}`, 'error');
             setLoadingInfo('');
@@ -253,7 +267,7 @@ export default function App() {
         cancel={() => setShowModal(false)}
       >
         检测到已保存的远端服务器
-        <br/>
+        <br />
         {settings?.webDav?.url}
       </Modal>
     </div>

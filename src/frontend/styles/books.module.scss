@@ -130,3 +130,28 @@
     color: #6c9;
   }
 }
+
+.bookshelfButton {
+  width: 100%;
+  height: 2.5rem;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  border-bottom: #111 solid 1px;
+  font-size: 1rem;
+  color: #444;
+  display: block;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.bookshelfButton:hover {
+  color: #6cd4a4;
+}
+
+.bookshelfButtonActive {
+  color: #6cd4a4;
+}
