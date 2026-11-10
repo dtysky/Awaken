@@ -15,7 +15,6 @@ export interface IConfig {
 
 export async function loadSettings(): Promise<ISystemSettings> {
   const settings = await bk.worker.loadSettings();
-  console.log(settings)
 
   return settings;
 }
@@ -26,22 +25,25 @@ export async function saveSettings(settings: ISystemSettings) {
 
 export async function loadBooks() {
   let books: IBook[] = [];
-  try {
+  if (await bk.worker.fs.exists('books.json', 'Books')) {
     const txt = await bk.worker.fs.readFile('books.json', 'utf8', 'Books') as string;
     books = JSON.parse(txt);
-  } catch (error) {
+    if (!Array.isArray(books)) {
+      throw new Error('本地书目索引格式错误，请保留文件以便恢复。');
+    }
+  } else {
     await bk.worker.fs.writeFile('books.json', '[]', 'Books');
   }
 
   for (const book of books) {
-    fillBookCover(book); 
+    await fillBookCover(book);
   }
 
   return books;
 }
 
-export function fillBookCover(book: IBook) {
-  book.cover = bk.worker.getCoverUrl(book);
+export async function fillBookCover(book: IBook) {
+  book.cover = await bk.worker.fs.exists(`${book.hash}/cover.png`, 'Books') ? bk.worker.getCoverUrl(book) : undefined;
 }
 
 export async function selectFolder(requireRes: boolean): Promise<string> {
@@ -158,7 +160,7 @@ function findFromSection(
       return posS >= 0;
     });
 
-    return nodeS ? getRange(section, nodeS, posS, nodeS, posS + textE.length) : undefined;
+    return nodeS ? getRange(section, nodeS, posS, nodeS, posS + textS.length) : undefined;
   }
 
   if (!linkS && !linkE) {

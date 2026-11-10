@@ -45,11 +45,14 @@ public class AwakenXHRHandler: NSObject, WKURLSchemeHandler {
                     strongSelf.postFailed(to: urlSchemeTask, error: error!)
                 } else if (data != nil) {
                     var res = (response as! HTTPURLResponse)
-                    var headers: [String: String] = [
+                    var headers = res.allHeaderFields.reduce(into: [String: String]()) { result, item in
+                        result[String(describing: item.key)] = String(describing: item.value)
+                    }
+                    headers.merge([
                         "Access-Control-Allow-Origin": "*",
                         "Access-Control-Allow-Methods": "*",
-                        "Access-Control-Expose-Headers": "X-Error-Message, Content-Type, WWW-Authenticate"
-                    ]
+                        "Access-Control-Expose-Headers": "X-Error-Message, Content-Type, WWW-Authenticate, ETag"
+                    ]) { _, new in new }
                     strongSelf.postResponse(to: urlSchemeTask, response: HTTPURLResponse(
                         url: requestUrl, statusCode: res.statusCode,
                         httpVersion: nil, headerFields: headers

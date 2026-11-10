@@ -13,6 +13,11 @@ import {DAV_PREFIX} from '../common';
 import {IBook} from '../../interfaces/protocols';
 
 let BOOKS_FOLDER: string;
+let appHideCallback: () => void = () => {};
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { appHideCallback(); }
+});
+window.addEventListener('pagehide', () => appHideCallback());
 
 function processPath(fp: string, base: TBaseDir): {base: number, fp: string, dir: () => Promise<string>;} {
   switch (base) {
@@ -33,11 +38,10 @@ export const worker: IWorker = {
   loadSettings: async () => {
     let settings: ISystemSettings;
 
-    try {
-      await fs.exists(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
+    if ((await fs.exists(SETTINGS_FP.fp, {dir: SETTINGS_FP.base})) as unknown as boolean) {
       const txt = await fs.readTextFile(SETTINGS_FP.fp, {dir: SETTINGS_FP.base});
       settings = JSON.parse(txt);
-    } catch (error) {
+    } else {
       settings = {
         folder: '',
         webDav: {
@@ -70,7 +74,8 @@ export const worker: IWorker = {
   async selectFolder() {
     const selected = await dialog.open({
       title: '选择目录',
-      directory: true
+      directory: true,
+      recursive: true
     });
 
     return selected as string;
@@ -118,7 +123,7 @@ export const worker: IWorker = {
 
   },
   onAppHide(callback: () => void) {
-
+    appHideCallback = callback;
   },
   getCoverUrl(book: IBook): string {
     return tauri.convertFileSrc(`${BOOKS_FOLDER}/${book.hash}/cover.png`);
@@ -130,19 +135,24 @@ export const worker: IWorker = {
       if (baseDir === 'Books') {
         const bp = tauri.convertFileSrc(fp);
         const res = await fetch(bp);
+        if (!res.ok) { throw new Error(`读取文件失败：${res.status} ${filePath}`); }
         return encoding === 'utf8' ? res.text() : res.arrayBuffer();
       }
 
       return encoding === 'utf8' ?
         fs.readTextFile(fp, base && {dir: base}) as Promise<string> :
-        (await fs.readBinaryFile(fp, base && {dir: base})).buffer;
+        Uint8Array.from(await fs.readBinaryFile(fp, base && {dir: base})).buffer;
     },
     async writeFile(filePath: string, content: string | ArrayBuffer, baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);
 
-      return typeof content === 'string' ?
-        fs.writeTextFile(fp, content, base && {dir: base}) :
-        fs.writeBinaryFile(fp, content, base && {dir: base});
+      const temporary = `${fp}.awaken-tmp`;
+      if (typeof content === 'string') {
+        await fs.writeTextFile(temporary, content, base && {dir: base});
+      } else {
+        await fs.writeBinaryFile(temporary, content, base && {dir: base});
+      }
+      await fs.renameFile(temporary, fp, base && {dir: base});
     },
     async removeFile(filePath: string, baseDir: TBaseDir) {
       const {fp, base} = processPath(filePath, baseDir);
@@ -173,7 +183,7 @@ export const worker: IWorker = {
 
         return {
           path: p,
-          isDir: !!entity.children?.length
+          isDir: entity.children !== undefined
         };
       });
     },
@@ -200,21 +210,25 @@ if (!window['Awaken']) {
       }
 
       const url = config.url.replace(DAV_PREFIX, '');
+      // PROPFIND returns XML even for .png/.epub paths. Use the requested
+      // response type instead of guessing it from the file extension.
+      const binary = config.method.toUpperCase() === 'GET' && config.xhr.responseType === 'arraybuffer';
 
       http.fetch(url, {
+        timeout: binary ? 120 : 15,
         method: config.method as any,
         body: config.body ? (typeof config.body === 'string' ? http.Body.text(config.body) : http.Body.bytes(config.body)) : undefined,
         headers: config.headers,
-        responseType: /(png|epub)$/.test(url) ? http.ResponseType.Binary : http.ResponseType.Text
+        responseType: binary ? http.ResponseType.Binary : http.ResponseType.Text
       }).then(res => {
         handler.resolve({
           config: config,
           status: res.status,
-          headers: {},
-          response: res.data
+          headers: res.headers,
+          response: binary ? Uint8Array.from(res.data as number[]).buffer : res.data
         });
-      }).catch(error => {
-        handler.reject(error);
+      }).catch(() => {
+        handler.reject({config, type: 'error'});
       });
     }
   });

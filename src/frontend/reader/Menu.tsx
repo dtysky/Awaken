@@ -136,7 +136,7 @@ export function Menu(props: IMenuProps) {
               style={{marginTop: '8px'}}
               showValue={false}
               icon={<Icon type='clover' color='#6c9' />}
-              value={lineSpace * 10}
+              value={letterSpace * 10}
               min={0}
               max={10}
               onChange={val => setLetterSpace(val / 10)}

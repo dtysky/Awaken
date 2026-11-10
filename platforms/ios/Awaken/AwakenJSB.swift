@@ -176,7 +176,7 @@ window.Awaken = {
         }
     }
     
-    private func getPath(path: String, base: String) -> URL {
+    private func getPath(path: String, base: String) throws -> URL {
         if (base == "None") {
             return URL(fileURLWithPath: path);
         }
@@ -185,7 +185,12 @@ window.Awaken = {
             return mBaseDir.appendingPathComponent(base)
         }
         
-        return mBaseDir.appendingPathComponent(base).appendingPathComponent(path)
+        let root = mBaseDir.appendingPathComponent(base).standardizedFileURL.resolvingSymlinksInPath()
+        let file = root.appendingPathComponent(path).standardizedFileURL.resolvingSymlinksInPath()
+        guard file.path == root.path || file.path.hasPrefix(root.path + "/") else {
+            throw "Path must remain inside its base directory"
+        }
+        return file
     }
 
     private func readTextFile(path: String, base: String) throws -> FileHandle {
@@ -197,13 +202,13 @@ window.Awaken = {
     }
     
     private func writeTextFile(path: String, base: String, content: String) throws {
-        let file = getPath(path: path, base: base)
-        try content.write(to: file, atomically: false, encoding: .utf8)
+        let file = try getPath(path: path, base: base)
+        try content.write(to: file, atomically: true, encoding: .utf8)
     }
     
     private func writeBinaryFile(path: String, base: String, content: Data) throws {
-        let file = getPath(path: path, base: base)
-        try content.write(to: file)
+        let file = try getPath(path: path, base: base)
+        try content.write(to: file, options: .atomic)
     }
 
     private func removeFile(path: String, base: String) throws {
@@ -211,7 +216,7 @@ window.Awaken = {
     }
 
     private func createDir(path: String, base: String) throws {
-        let existed = mFileManager.fileExists(atPath: getPath(path: path, base: base).path)
+        let existed = try mFileManager.fileExists(atPath: getPath(path: path, base: base).path)
         if (existed) {
             return;
         }
@@ -228,7 +233,7 @@ window.Awaken = {
 
     private func readDir(path: String, base: String) throws -> String {
         var res: [String] = []
-        let root = getPath(path: path, base: base)
+        let root = try getPath(path: path, base: base)
         let directoryContents = try mFileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
 
         for url in directoryContents {
@@ -244,7 +249,7 @@ window.Awaken = {
     }
 
     private func exists(path: String, base: String) throws -> String {
-        return mFileManager.fileExists(atPath: getPath(path: path, base: base).path) ? "true" : "false"
+        return try mFileManager.fileExists(atPath: getPath(path: path, base: base).path) ? "true" : "false"
     }
     
     private func loadAsset(url: String) throws -> FileHandle {

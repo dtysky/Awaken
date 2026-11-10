@@ -19,6 +19,7 @@ interface IMenuProps {
   onUpdateSettings(settings: ISystemSettings): void;
   onAddBooks(files: string[]): void;
   onSync(): void;
+  onSyncAll(): void;
 }
 
 export function Menu(props: IMenuProps) {
@@ -58,6 +59,13 @@ export function Menu(props: IMenuProps) {
           onClick={props.onSync}
         >
           同步
+        </Button>
+        <Button
+          className={css.menuItem}
+          icon={'offline'}
+          onClick={props.onSyncAll}
+        >
+          同步全部
         </Button>
         {
           bk.supportAddDeleteBook && (
@@ -148,7 +156,7 @@ export function Menu(props: IMenuProps) {
               }
 
               <FormGroup label="WebDAV" elementStyle={{ flexFlow: 'column' }}>
-                <FormItem label="地址" status='normal'>
+                <FormItem label="地址（WebDAV 根目录或书库目录）" status='normal'>
                   <Text
                     defaultValue={settings.webDav.url}
                     auto

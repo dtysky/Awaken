@@ -9,23 +9,27 @@ import ColorHash from 'color-hash'
 import { IconButton, Modal, Select, Option } from 'hana-ui';
 
 import bk from '../../backend';
-import { IBook, IBookConfig } from '../../interfaces/protocols';
+import { IBook } from '../../interfaces/protocols';
 import { Menu } from './Menu';
 import { ISystemSettings } from '../../interfaces';
 
 import css from '../styles/books.module.scss';
-import webdav from '../webdav';
+
 
 export interface IBooksProps {
   bookshelfList: [string[], React.Dispatch<React.SetStateAction<string[]>>];
   settings: ISystemSettings;
   books: [IBook[], React.Dispatch<React.SetStateAction<IBook[]>>];
+  downloaded: {[hash: string]: boolean};
+  onDownload(book: IBook): Promise<void>;
+  onMoveBook(book: IBook, shelf: string | null): void;
   onSelect(index: number): void;
   onUpdateSettings(config: ISystemSettings): void;
   onAddBooks(files: string[]): void;
   onRemoveBook(book: IBook): void;
   onImportBookNotes(book: IBook): void;
   onSync(): void;
+  onSyncAll(): void;
 }
 
 export default function Books(props: IBooksProps) {
@@ -47,12 +51,15 @@ export default function Books(props: IBooksProps) {
         onUpdateSettings={props.onUpdateSettings}
         onAddBooks={props.onAddBooks}
         onSync={props.onSync}
+        onSyncAll={props.onSyncAll}
       />
       <div className={css.list}>
         {books.map((book, index) => !book.removed && (book.bookshelf?.value == selectedBookshelf) && (
           <Book
             key={book.hash}
             book={book}
+            downloaded={!!props.downloaded[book.hash]}
+            onDownload={() => props.onDownload(book)}
             onSelect={() => {
               props.onSelect(index)
             }}
@@ -91,42 +98,10 @@ export default function Books(props: IBooksProps) {
       <Modal
         show={isOnAddToBookshelf}
         title='添加到书架'
-        confirm={async () => {
+        confirm={() => {
+          if (!bookAddToBookshelf || !addToBookshelfBook) { return; }
+          props.onMoveBook(bookAddToBookshelf, addToBookshelfBook === '默认书架' ? null : addToBookshelfBook);
           setIsOnAddToBookshelf(false);
-          try {
-            const configPath = `${bookAddToBookshelf.hash}/config.json`;
-            let config: IBookConfig
-            const exists = await bk.worker.fs.exists(configPath, 'Books');
-            if (exists) {
-              const configStr = await bk.worker.fs.readFile(configPath, 'utf8', 'Books') as string;
-              config = JSON.parse(configStr);
-            } else {
-              config = {
-                ts: Date.now(),
-                lastProgress: 0,
-                progress: 0,
-                bookmarks: [],
-                notes: []
-              };
-            }
-
-            if (bookAddToBookshelf && addToBookshelfBook) {
-              const updatedBooks = [
-                ...books.filter(b => b.hash !== bookAddToBookshelf.hash),
-                {
-                  ...bookAddToBookshelf,
-                  bookshelf: {
-                    value: addToBookshelfBook === '默认书架' ? null : addToBookshelfBook,
-                    ts: Date.now()
-                  }
-                }
-              ];
-              setBooks(updatedBooks);
-              await webdav.syncBookshelf(updatedBooks);
-            }
-          } catch (e) {
-            console.error(e);
-          }
           setAddToBookshelfBook(undefined);
           setBookAddToBookshelf(undefined);
         }}
@@ -161,6 +136,8 @@ export default function Books(props: IBooksProps) {
 
 interface IBookProps {
   book: IBook;
+  downloaded: boolean;
+  onDownload(): Promise<void>;
   onSelect(): void;
   onDelete(): void;
   onImportNotes(): void;
@@ -169,6 +146,8 @@ interface IBookProps {
 
 const colorHash = new ColorHash();
 function Book(props: IBookProps) {
+  const [downloading, setDownloading] = React.useState(false);
+  const [error, setError] = React.useState('');
   return (
     <div
       className={css.book}
@@ -179,6 +158,8 @@ function Book(props: IBookProps) {
       }}
     >
       <div
+        role="button" tabIndex={0} aria-label={`阅读《${props.book.name}》`}
+        onKeyDown={event => { if (event.key === "Enter") { props.onSelect(); } }}
         className={css.bookBg}
         onClick={props.onSelect}
       >
@@ -190,6 +171,17 @@ function Book(props: IBookProps) {
             </div>
           )
         }
+      </div>
+      <div className={css.downloadStatus}>
+        <span>{props.downloaded ? '已下载 · 离线可读' : downloading ? '下载中…' : '未下载'}</span>
+        {!props.downloaded && <button type='button' disabled={downloading} onClick={async () => {
+          setDownloading(true);
+          setError('');
+          try { await props.onDownload(); }
+          catch (error) { setError(error.message || String(error)); }
+          finally { setDownloading(false); }
+        }}>{downloading ? '下载中…' : error ? '重试下载' : '下载到本机'}</button>}
+        {error && <span className={css.downloadError} title={error}>{error}</span>}
       </div>
       {
         bk.supportAddDeleteBook && (

@@ -26,7 +26,7 @@
 
 前置需求：
 
-1. NodeJS v16以及以上
+1. NodeJS v20（本次构建使用 20.20.2）
 2. Rust环境
 
 首先`Clone`整个仓库，初始化项目：
@@ -35,7 +35,7 @@
 npm run init
 ```
 
->需要用其他包管理工具的注意加上`--force`，赖得处理UIKit的React版本冲突了...
+>现有 UIKit 使用旧版 React peer 声明，安装时使用 `npm install --legacy-peer-deps`。已提交锁文件，复现构建可使用 `npm ci --legacy-peer-deps`。
 
 接着运行开发指令：
 
@@ -76,6 +76,16 @@ let host: String = "http://${DEV_URL}"
 接着连上设备调试即可。
 
 ## 测试
+
+数据保存与同步的自动化回归测试：`npm test`。类型检查：`npx tsc --noEmit`。
+
+可选的阅读器浏览器回归测试：安装 `playwright-core` 及其 WebKit 运行时后，运行 `node tests/selection.browser.cjs`。可用 `AWAKEN_PLAYWRIGHT_MODULE` 指定外部安装路径，`PLAYWRIGHT_BROWSERS_PATH` 指定浏览器缓存目录。测试使用临时生成的 EPUB，验证选区、高亮、编辑、删除、重开恢复和跨页操作。
+
+书库顶部显示本地保存和同步状态，失败后可重试。未下载的书籍可通过卡片上的“下载到本机”单独下载；离线时仍可阅读已下载书籍，修改会保留为待同步状态。
+
+点击书库顶部“同步全部”，可一次同步所有书架的书目、笔记、书签和阅读进度，并将全部 EPUB 下载到本机。处理时显示当前书名与数量进度，已有 EPUB 会跳过；单书下载失败后继续处理其余书籍，完成后列出失败项。点击顶部“重试同步”可再次尝试，已下载的文件会保留。原有“同步”保持书目与本机待上传修改的同步方式，正文仍按需下载。
+
+WebDAV 地址支持服务根目录（如 `https://dav.jianguoyun.com/dav/`）或直接指向书库（如 `https://dav.jianguoyun.com/dav/Awaken/`），程序会自动识别已有 `books.json`。同步成功后显示书目数量；书目和封面会拉到本机，EPUB 正文按需下载。
 
 测试很简单，如果实在桌面端，需要你一开始选择一个空目录作为本地书籍存储，可以选择**test/client**目录，接着在主界面的**设定**中，填入以下配置：
 

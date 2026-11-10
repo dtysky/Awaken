@@ -33,33 +33,27 @@ export enum ENoteAction {
 }
 
 export function mergeCFI(cfi1: string, cfi2: string): string {
-  let tmp = parser.getPathComponent(cfi1);
-  const tmp1: string[] = tmp.substring(0, tmp.length - 1).split('/').slice(2);
-  tmp = parser.getPathComponent(cfi2);
-  const tmp2: string[] = tmp.substring(0, tmp.length - 1).split('/').slice(2);
-
-  const base: string[] = [];
-  let i: number = 0;
-  for (i = 0; i < tmp1.length; i += 1) {
-    if (tmp1[i] !== tmp2[i]) {
-      break;
-    }
-
-    base.push(tmp1[i]);
-  }
-
-  const r1 = tmp1.slice(i);
-  const r2 = tmp2.slice(i);
-
-  return `epubcfi(/6/4!/4/${base.join('/')},/${r1.join('/')},/${r2.join('/')})`;
+  const range = new EpubCFI(cfi1) as any;
+  const end = new EpubCFI(cfi2) as any;
+  if (range.spinePos !== end.spinePos) { return cfi1; }
+  const startSteps = range.path.steps;
+  const endSteps = end.path.steps;
+  let common = 0;
+  while (common < Math.min(startSteps.length, endSteps.length) - 1 &&
+    JSON.stringify(startSteps[common]) === JSON.stringify(endSteps[common])) { common++; }
+  range.range = true;
+  range.start = {steps: startSteps.slice(common), terminal: range.path.terminal};
+  range.end = {steps: endSteps.slice(common), terminal: end.path.terminal};
+  range.path = {steps: startSteps.slice(0, common), terminal: {offset: null, assertion: null}};
+  return range.toString();
 }
 
 export function splitCFI(cfi: string) {
-  const chapter = parser.getChapterComponent(cfi);
-  const base = parser.getPathComponent(cfi);
-  const [s, e] = parser.getRange(cfi);
-  
-  return [`${chapter}!${base}${s})`, `${chapter}!${base}${e}`];
+  const start = new EpubCFI(cfi) as any;
+  const end = new EpubCFI(cfi) as any;
+  start.collapse(true);
+  end.collapse(false);
+  return [start.toString(), end.toString()];
 }
 
 export interface INoteMarkStatus {
@@ -95,14 +89,17 @@ export function changeNote(
   status: INoteMarkStatus,
   action?: ENoteAction,
 ): INoteMarkStatus {
-  action = action || (status.exist ? ENoteAction.Delete : ENoteAction.Add);
+  action = action ?? (status.exist ? ENoteAction.Delete : ENoteAction.Add);
 
   if (action === ENoteAction.Add) {
-    if (status.index !== notes.length) {
+    if (notes[status.index]?.removed &&
+      parser.compare(note.start, notes[status.index].end) <= 0 &&
+      parser.compare(note.end, notes[status.index].start) > 0) {
       notes.splice(status.index, 1, note);
     } else {
       notes.splice(status.index, 0, note);
     }
+    delete note.removed;
     status.exist = true;
   } else {
     if (status.exist) {

@@ -6,11 +6,11 @@
   },
   "package": {
     "productName": "Awaken",
-    "version": "1.0.1"
+    "version": "1.0.5"
   },
   "tauri": {
     "allowlist": {
-      "all": true,
+      "all": false,
       "fs": {
         "readFile": true,
         "writeFile": true,
@@ -22,17 +22,21 @@
         "renameFile": true,
         "exists": true,
         "scope": [
-          "*"
+          "$APP",
+          "$APP/**",
+          "$LOG",
+          "$LOG/**"
         ]
       },
       "dialog": {
-        "open": true
+        "open": true,
+        "message": true
       },
       "path": {
         "all": true
       },
       "http": {
-        "all": true,
+        "all": false,
         "request": true,
         "scope": [
           "https://**",
@@ -42,7 +46,7 @@
       "protocol": {
         "asset": true,
         "assetScope": [
-          "**"
+          "$APP/**"
         ]
       }
     },
@@ -80,7 +84,7 @@
       }
     },
     "security": {
-      "csp": "default-src blob: https: http: tauri: asset:; img-src blob: https: http: tauri: asset:; style-src blob: https: http: tauri: asset: 'unsafe-inline'"
+      "csp": "default-src 'self'; script-src 'self'; connect-src 'self' blob: asset: tauri: http://asset.localhost http://tauri.localhost; img-src 'self' data: blob: https: http: asset:; frame-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'none'"
     },
     "updater": {
       "active": false

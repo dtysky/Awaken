@@ -49,8 +49,13 @@ class AwakenJSB {
             return File(filePath)
         }
 
-        val path = mBaseDir.resolve(base).resolve(filePath);
-        return path.toFile()
+        checkBase(base)
+        val root = mBaseDir.resolve(base).toFile().canonicalFile
+        val file = File(root, filePath).canonicalFile
+        if (file != root && !file.path.startsWith(root.path + File.separator)) {
+            throw Exception("Path must remain inside its base directory")
+        }
+        return file
     }
 
     private fun getStream(filePath: String, base: String): InputStream {
@@ -147,6 +152,9 @@ class AwakenJSB {
         }
 
         if (response != null) {
+            response.headers.forEach { (name, value) -> headers[name] = value }
+            headers["Access-Control-Allow-Origin"] = "*"
+            headers["Access-Control-Expose-Headers"] = "X-Error-Message, Content-Type, WWW-Authenticate, ETag"
             if (!response.isSuccessful) {
                 headers["X-Error-Message"] = response.message
             }

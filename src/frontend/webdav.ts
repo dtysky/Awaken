@@ -4,15 +4,16 @@
  * @Link   : dtysky.moe
  * @Date   : 2022/11/15 22:54:37
  */
-import {createClient, WebDAVClient, FileStat} from 'webdav/web';
-import ePub, {EpubCFI} from 'epubjs';
+import {createClient, WebDAVClient} from 'webdav/web';
+import ePub from 'epubjs';
 import * as md5 from 'js-md5';
 
 import bk from '../backend';
 import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
 import {fillBookCover, searchFirstInBook} from './utils';
 import {ISystemSettings} from '../interfaces';
-import { splitCFI } from './reader/common';
+import {splitCFI} from './reader/common';
+import {ISyncState, mergeBooks, mergeConfig, mergeNotes, serializeBooks, validateBooks} from './sync';
 
 export interface IBookContent {
   content: ArrayBuffer;
@@ -21,385 +22,374 @@ export interface IBookContent {
   pages?: string;
 }
 
-const parser = new EpubCFI() as any;
-
-function getRemote(fp: string) {
-  return `Awaken/${fp}`;
-}
-
-class WebDAV {
+export class WebDAV {
   private _client: WebDAVClient;
   private _folder: string;
-  private _connectWarnShowed: boolean = false;
+  private _remoteFolder = 'Awaken';
+  private _writes: Promise<any> = Promise.resolve();
+  private _syncs: Promise<any> = Promise.resolve();
+  private _listeners = new Set<(state: ISyncState) => void>();
+  private _state: ISyncState = {phase: 'local', libraryPending: 0, pendingBooks: {}};
 
-  get connected() {
-    return !!this._client;
+  get connected() { return !!this._client; }
+  get syncState() { return this._state; }
+
+  public subscribe(listener: (state: ISyncState) => void) {
+    this._listeners.add(listener);
+    return () => { this._listeners.delete(listener); };
+  }
+
+  private _publish(update: Partial<ISyncState>) {
+    this._state = {...this._state, ...update};
+    this._listeners.forEach(listener => listener(this._state));
+  }
+
+  private _write(path: string, data: string | ArrayBuffer, base: 'Books' | 'None' = 'Books') {
+    const task = this._writes.catch(() => {}).then(() => bk.worker.fs.writeFile(path, data, base));
+    this._writes = task;
+    return task;
+  }
+
+  private _saveState() {
+    return this._write('sync-state.json', JSON.stringify(this._state));
+  }
+
+  public async initialize() {
+    if (await bk.worker.fs.exists('sync-state.json', 'Books')) {
+      const saved = JSON.parse(await bk.worker.fs.readFile('sync-state.json', 'utf8', 'Books') as string);
+      this._publish({...saved, pendingBooks: saved.pendingBooks || {},
+        phase: saved.phase === 'syncing' ? 'pending' : saved.phase});
+    }
+  }
+
+  private async _pending(hash?: string) {
+    const revision = Math.max(Date.now(), this._state.libraryPending + 1, ...Object.values(this._state.pendingBooks).map(n => n + 1));
+    this._publish({phase: this._state.phase === 'syncing' ? 'syncing' : 'pending', error: undefined,
+      ...(hash ? {pendingBooks: {...this._state.pendingBooks, [hash]: revision}} : {libraryPending: revision})});
+    await this._saveState();
+  }
+
+  private _runSync<T>(action: () => Promise<T>): Promise<T> {
+    const task = this._syncs.catch(() => {}).then(async () => {
+      this._publish({phase: 'syncing', error: undefined});
+      try {
+        const result = await action();
+        const pending = this._state.libraryPending || this._state.allBooksPending || Object.keys(this._state.pendingBooks).length;
+        this._publish({phase: pending ? 'pending' : 'synced', lastSync: Date.now(), error: undefined});
+        await this._saveState();
+        return result;
+      } catch (error) {
+        this._publish({phase: 'error', error: error.message || String(error)});
+        await this._saveState();
+        throw error;
+      }
+    });
+    this._syncs = task;
+    return task;
+  }
+
+  private _remotePath(path: string) {
+    return this._remoteFolder ? `${this._remoteFolder}/${path}` : path;
+  }
+
+  private async _findLibrary(client: WebDAVClient, url: string): Promise<string> {
+    // Existing indexes take precedence over creating a new library. The URL can
+    // point either to the WebDAV root or directly to the library directory.
+    for (const folder of ['', 'Awaken']) {
+      const index = folder ? `${folder}/books.json` : 'books.json';
+      try {
+        validateBooks(JSON.parse(await client.getFileContents(index, {format: 'text'}) as string));
+        return folder;
+      } catch (error) {
+        if (error.status !== 404 && error.response?.status !== 404) { throw error; }
+      }
+    }
+    const assertNoBooks = async (folder: string) => {
+      const entries = await client.getDirectoryContents(folder || '/') as any[];
+      if (entries.some(entry => entry.type === 'directory' && /^[a-f0-9]{32}$/i.test(entry.basename))) {
+        throw new Error('远端存在书籍目录，但缺少 books.json 索引。请恢复索引后重试，现有书籍未修改。');
+      }
+    };
+    await assertNoBooks('');
+    const finalSegment = decodeURIComponent(new URL(url).pathname).replace(/\/+$/, '').split('/').pop();
+    const folder = finalSegment?.toLowerCase() === 'awaken' ? '' : 'Awaken';
+    if (folder) {
+      if (await client.exists(folder)) { await assertNoBooks(folder); }
+      else { await client.createDirectory(folder); }
+    }
+    const index = folder ? `${folder}/books.json` : 'books.json';
+    await client.putFileContents(index, '[]', {overwrite: false});
+    validateBooks(JSON.parse(await client.getFileContents(index, {format: 'text'}) as string));
+    return folder;
   }
 
   public async changeRemote(options: ISystemSettings['webDav']) {
-    this._client = createClient(
-      `${bk.davPrefix}${options.url}`,
-      {
-        username: options.user,
-        password: options.password
-      }
-    );
-
+    this._client = undefined;
+    if (!options.url) {
+      this._publish({phase: 'local', lastSync: undefined, bookCount: undefined, allBooksPending: false, remote: undefined, error: undefined});
+      await this._saveState();
+      return;
+    }
+    const url = options.url.trim().replace(/\/+$/, '');
+    const client = createClient(`${bk.davPrefix}${url}`, {username: options.user, password: options.password});
     try {
-      const hasBookIndexes = await this._client.exists('Awaken');
-      if (!hasBookIndexes) {
-        await this._client.createDirectory('Awaken');
-        await this._client.putFileContents(getRemote('books.json'), '[]');
-      }
+      this._remoteFolder = await this._findLibrary(client, url);
+      const remote = `${url}|${options.user}|${this._remoteFolder || '.'}`;
+      this._client = client;
+      this._publish({remote, lastSync: remote === this._state.remote ? this._state.lastSync : undefined,
+        bookCount: remote === this._state.remote ? this._state.bookCount : undefined,
+        allBooksPending: remote === this._state.remote && this._state.allBooksPending,
+        phase: 'pending', error: undefined});
+      await this._saveState();
     } catch (error) {
-      console.error(error)
-      this._client = undefined;
-      throw new Error(`无法连接已保存的服务器，可能是服务器无效或被屏蔽，请检查：${error.message || error}`);
+      this._publish({phase: 'error', error: `连接失败：${error.message || error}`});
+      await this._saveState();
+      throw error;
     }
   }
 
   public async changeLocal(folder: string, onUpdate?: (info: string) => void) {
-    if (!this._folder) {
-      this._folder = folder;
-      return;
-    }
-
-    if (this._folder === folder) {
-      return;
-    }
-
-    onUpdate('开始迁移本地书籍...');
+    if (!this._folder) { this._folder = folder; return; }
+    if (this._folder === folder) { return; }
+    onUpdate?.('开始迁移本地书籍...');
+    await this._writes;
     const {fs} = bk.worker;
-    const tree = await fs.readDir('', 'Books');
-    
-    for (const sub of tree) {
+    for (const sub of await fs.readDir('', 'Books')) {
       if (!sub.isDir) {
-        fs.writeFile(`${folder}/${sub.path}`, await fs.readFile(sub.path, 'binary', 'Books'), 'None');
+        await fs.writeFile(`${folder}/${sub.path}`, await fs.readFile(sub.path, 'binary', 'Books'), 'None');
         continue;
       }
-
       await fs.createDir(`${folder}/${sub.path}`, 'None');
-      const subTree = await fs.readDir(sub.path, 'Books');
-
-      for (const {isDir, path} of subTree) {
-        // 最多两级
-        if (isDir) {
-          continue;
-        }
-
-        /\.epub$/.test(path) && onUpdate(`迁移书籍《${path}》...`);
-        fs.writeFile(`${folder}/${sub.path}/${path}`, await fs.readFile(`${sub.path}/${path}`, 'binary', 'Books'), 'None');
+      for (const entry of await fs.readDir(sub.path, 'Books')) {
+        if (entry.isDir) { continue; }
+        onUpdate?.(`迁移 ${entry.path}...`);
+        await fs.writeFile(`${folder}/${sub.path}/${entry.path}`, await fs.readFile(`${sub.path}/${entry.path}`, 'binary', 'Books'), 'None');
       }
+    }
+    this._folder = folder;
+  }
+
+  public async saveBooks(books: IBook[], changed = true) {
+    await this._write('books.json', serializeBooks(books));
+    if (changed) { await this._pending(); }
+  }
+
+  private async _readRemote(path: string) {
+    try {
+      const response = await this._client.getFileContents(this._remotePath(path), {format: 'text', details: true}) as any;
+      return {value: JSON.parse(typeof response === 'string' ? response : response.data),
+        etag: response.headers?.etag || response.headers?.ETag};
+    } catch (error) {
+      if (error.status === 404 || error.response?.status === 404) { return {value: undefined, etag: undefined}; }
+      throw error;
     }
   }
 
-  public async syncBooks(books: IBook[], onUpdate: (info: string) => void): Promise<IBook[]> {
-    const {fs} = bk.worker;
+  private async _putRemote(path: string, value: any, previous: {value: any, etag?: string}) {
+    const headers = previous.etag ? {'If-Match': previous.etag} :
+      previous.value === undefined ? {'If-None-Match': '*'} : {};
+    await this._client.putFileContents(this._remotePath(path), JSON.stringify(value), {overwrite: true, headers});
+  }
 
-    if (!this._client) {
-      bk.worker.showMessage('服务器未连接，无法同步', 'warning');
-      return books;
-    }
+  private _isConflict(error: any) { return (error.status || error.response?.status) === 412; }
 
-    let remoteBooks: IBook[] = [];
-    const tmp = await this._client.getFileContents(getRemote('books.json'), {format: 'text'}) as string;
-    remoteBooks = JSON.parse(tmp);
-    
-    const localTable: {[hash: string]: IBook} = {};
-    const remoteTable: {[hash: string]: IBook} = {};
+  public async syncBooks(books: IBook[], onUpdate: (info: string) => void = () => {}): Promise<IBook[]> {
+    await this.saveBooks(books, false);
+    if (!this.connected) { return books; }
+    return this._runSync(() => this._syncLibrary(books, onUpdate));
+  }
 
-    books.forEach(book => localTable[book.hash] = book);
-    remoteBooks.forEach(book => remoteTable[book.hash] = book);
-
-    const syncToLocalBooks: IBook[] = [];
-    remoteBooks.forEach(book => {
-      const localBook = localTable[book.hash];
-      if (
-        (localBook && (book.ts > localBook.ts)) ||
-        (!localBook && !book.removed)
-      ) {
-        syncToLocalBooks.push(book);
+  public async syncAllBooks(books: IBook[], onUpdate: (info: string) => void = () => {}): Promise<IBook[]> {
+    return this._runSync(async () => {
+      this._publish({allBooksPending: true});
+      await this._saveState();
+      if (!this.connected) { throw new Error('请连接 WebDAV 后同步全部书籍。'); }
+      await this.saveBooks(books, false);
+      onUpdate('同步所有书架的书目和封面…');
+      // The entire operation shares one queue entry, so success is only reported
+      // after all configs and EPUBs have been processed.
+      await this._syncLibrary(books, onUpdate, false);
+      const active = books.filter(book => !book.removed);
+      const failures: string[] = [];
+      for (let index = 0; index < active.length; index++) {
+        const book = active[index];
+        const update = (message: string) => onUpdate(`[${index + 1}/${active.length}] ${message}`);
+        try {
+          update(`同步《${book.name}》的笔记和阅读进度…`);
+          await this._syncBookNow(book);
+          update(`下载《${book.name}》到本机（已下载则跳过）…`);
+          await this.checkAndDownloadBook(book, update);
+        } catch (error) {
+          failures.push(`《${book.name}》：${error.message || error}`);
+        }
       }
-    });
-
-    const syncToRemoteBooks: IBook[] = [];
-    books.forEach(book => {
-      const remoteBook = remoteTable[book.hash];
-      if (
-        (remoteBook && (book.ts > remoteBook.ts)) ||
-        (!remoteBook && !book.removed)
-      ) {
-        syncToRemoteBooks.push(book);
+      if (failures.length) {
+        throw new Error(`全部同步未完成：成功 ${active.length - failures.length}/${active.length} 本。已下载的书籍已保留，重试会跳过已有文件。\n${failures.join('\n')}`);
       }
+      this._publish({allBooksPending: false});
+      onUpdate(`全部同步完成：${active.length} 本书已可离线阅读。`);
+      return [...books];
     });
+  }
 
-    if (syncToLocalBooks.length) {
-      onUpdate(`检测到远端新书籍 ${syncToLocalBooks.length} 本，准备同步到本地...`);
-      for (const book of syncToLocalBooks) {
-        const localBook = localTable[book.hash];
+  private async _syncLibrary(books: IBook[], onUpdate: (info: string) => void, syncPending = true): Promise<IBook[]> {
+    const revision = this._state.libraryPending;
+    let merged: IBook[];
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const previous = await this._readRemote('books.json');
+      if (previous.value === undefined) { throw new Error('远端 books.json 索引已丢失，请恢复后重试。'); }
+      const remote = validateBooks(previous.value);
+      const remoteTable = new Map(remote.map(book => [book.hash, book]));
+      merged = mergeBooks(books, remote);
+      for (const book of merged) {
+        const remoteBook = remoteTable.get(book.hash);
+        const epubPath = `${book.hash}/${book.name}.epub`;
         if (book.removed) {
-          onUpdate(`移除本地书籍 ${book.name}...`);
-          await this.removeBook(localBook, books);
-          localBook.ts = book.ts;
+          if (await bk.worker.fs.exists(epubPath, 'Books')) { await bk.worker.fs.removeFile(epubPath, 'Books'); }
+          if (!remoteBook?.removed && await this._client.exists(this._remotePath(epubPath))) {
+            await this._client.deleteFile(this._remotePath(epubPath));
+          }
           continue;
         }
-
-        onUpdate(`拉取书籍 ${book.name}到本地...`);
-        const contents = await this._client.getDirectoryContents(getRemote(book.hash)) as FileStat[];
-        if (!(await fs.exists(book.hash, 'Books'))) {
-          await fs.createDir(book.hash, 'Books');
-        }
-        
-        for (const stat of contents) {
-          // 这里只同步目录配置和封面，书籍等到加载时在真正下载！
-          if (stat.type !== 'file') {
-            continue;
+        if (!(await bk.worker.fs.exists(book.hash, 'Books'))) { await bk.worker.fs.createDir(book.hash, 'Books'); }
+        if (!remoteBook || remoteBook.removed || book.ts > remoteBook.ts) {
+          if (!(await this._client.exists(this._remotePath(book.hash)))) { await this._client.createDirectory(this._remotePath(book.hash)); }
+          for (const filename of [`${book.name}.epub`, 'cover.png', 'config.json']) {
+            const path = `${book.hash}/${filename}`;
+            if (filename === 'config.json' && await this._client.exists(this._remotePath(path))) { continue; }
+            if (await bk.worker.fs.exists(path, 'Books')) {
+              onUpdate(`上传《${book.name}》的 ${filename}...`);
+              await this._client.putFileContents(this._remotePath(path), await bk.worker.fs.readFile(path, 'binary', 'Books'), {overwrite: true});
+            }
           }
-          onUpdate(`拉取书籍 ${book.name}的${stat.basename}到本地...`);
-          !/\.epub$/.test(stat.basename) && await this._writeWithCheck(book, stat.basename, onUpdate);
         }
-  
+        await this._writeWithCheck(book, 'config.json', onUpdate);
+        if (!(await bk.worker.fs.exists(`${book.hash}/cover.png`, 'Books')) &&
+          await this._client.exists(this._remotePath(`${book.hash}/cover.png`))) {
+          await this._writeWithCheck(book, 'cover.png', onUpdate);
+        }
         await fillBookCover(book);
-        if (!localBook) {
-          books.splice(0, 0, book);
-        } else {
-          localBook.ts = book.ts;
-          delete localBook.removed;
-        }
+      }
+      try {
+        onUpdate('同步书目和书架...');
+        await this._putRemote('books.json', JSON.parse(serializeBooks(merged)), previous);
+        break;
+      } catch (error) {
+        if (!this._isConflict(error) || attempt === 2) { throw error; }
       }
     }
-
-    let booksStr = JSON.stringify(books);
-    await fs.writeFile('books.json', booksStr, 'Books');
-
-    if (syncToRemoteBooks.length) {
-      try {
-        onUpdate(`检测到本地新书籍 ${syncToRemoteBooks.length} 本，准备同步到远端...`);
-        for (const book of syncToRemoteBooks) {
-          if (book.removed) {
-            onUpdate(`删除远端书籍 ${book.name}...`);
-            await this._client.deleteFile(getRemote(`${book.hash}/${book.name}.epub`));
-            continue;
-          }
-
-          if (!(await this._client.exists(getRemote(book.hash)))) {
-            await this._client.createDirectory(getRemote(book.hash));
-          }
-  
-          for (const name of [`${book.name}.epub`, 'cover.png', 'config.json']) {
-            const fp = `${book.hash}/${name}`;
-            if (!(await fs.exists(fp, 'Books'))) {
-              continue;
-            }
-
-            onUpdate(`同步书籍 ${book.name}的${name} 到远端...`);
-            const data = await fs.readFile(fp, 'binary', 'Books');
-            await this._client.putFileContents(getRemote(fp), data, {overwrite: name !== 'config.json', onUploadProgress: ({loaded, total}) => {
-              onUpdate(`同步书籍 ${book.name} 的 ${name} 到远端：${~~(loaded / total * 100)}%`);
-            }});
-          }
+    books.splice(0, books.length, ...merged);
+    await this.saveBooks(books, false);
+    this._publish({bookCount: books.filter(book => !book.removed).length});
+    if (revision === this._state.libraryPending) { this._publish({libraryPending: 0}); }
+    for (const hash of Object.keys(this._state.pendingBooks)) {
+      const book = books.find(item => item.hash === hash);
+      if (book && !book.removed) {
+        if (syncPending) {
+          onUpdate(`同步《${book.name}》的笔记和进度...`);
+          await this._syncBookNow(book);
         }
-    
-        onUpdate(`同步目录到远端...`);
-        booksStr = JSON.stringify(books);
-        await fs.writeFile('books.json', booksStr, 'Books');
-        await this._client.putFileContents(getRemote('books.json'), booksStr, {overwrite: true, onUploadProgress: ({loaded, total}) => {
-          onUpdate(`同步目录到远端：${~~(loaded / total * 100)}%`);
-        }});
-        await fs.writeFile('books.json', booksStr, 'Books');
-      } catch (error) {
-        console.error(error)
-        bk.worker.showMessage(`同步到远端出错，可手动再次发起同步：${error.message || error}`, 'warning');
-      } 
+      } else {
+        const pendingBooks = {...this._state.pendingBooks};
+        delete pendingBooks[hash];
+        this._publish({pendingBooks});
+      }
     }
-
-    return books;
+    return [...books];
   }
 
   private async _writeWithCheck(book: IBook, filename: string, onUpdate?: (info: string) => void): Promise<ArrayBuffer | string> {
-    const {fs} = bk.worker;
-    const fp = `${book.hash}/${filename}`;
-    const existed = await fs.exists(fp, 'Books');
-
-    if (existed) {
-      return undefined;
-    }
-
-    const tmp = await this._client.getFileContents(getRemote(fp), {format: /json$/.test(filename) ? 'text' : 'binary', onDownloadProgress: ({loaded, total}) => {
-      onUpdate?.(`拉取书籍 ${book.name} 的 ${filename} 到本地：${~~(loaded / total * 100)}%`);
-    }});
-    await fs.writeFile(fp, tmp as ArrayBuffer, 'Books');
-
-    return tmp as ArrayBuffer | string;
+    const path = `${book.hash}/${filename}`;
+    if (await bk.worker.fs.exists(path, 'Books')) { return undefined; }
+    if (!this.connected) { throw new Error('书籍未下载，请连接服务器后下载。'); }
+    const data = await this._client.getFileContents(this._remotePath(path), {
+      format: /json$/.test(filename) ? 'text' : 'binary',
+      onDownloadProgress: ({loaded, total}) => onUpdate?.(`下载《${book.name}》${total ? ` ${Math.floor(loaded / total * 100)}%` : '...'}`)
+    });
+    await this._write(path, data as ArrayBuffer | string);
+    return data as ArrayBuffer | string;
   }
 
-  async checkAndDownloadBook(book: IBook, onUpdate: (info: string) => void): Promise<ArrayBuffer> {
-    const bookFp = `${book.hash}/${book.name}.epub`;
-
-    if (!(await bk.worker.fs.exists(bookFp, 'Books')) && !this.connected) {
-      throw new Error('书籍未下载并且未连接到服务器，请先连接服务器');
-    };
-
-    try {
-      onUpdate(`检测是否需要从远端拉取书籍本体...`);
-      return await this._writeWithCheck(book, `${book.name}.epub`, onUpdate) as ArrayBuffer;
-    } catch (error) {
-      throw new Error(`书籍下载出错：${error.message || error}`);
-    }
+  public async isDownloaded(book: IBook) {
+    return bk.worker.fs.exists(`${book.hash}/${book.name}.epub`, 'Books');
   }
-  
+
+  async checkAndDownloadBook(book: IBook, onUpdate: (info: string) => void = () => {}): Promise<ArrayBuffer> {
+    return await this._writeWithCheck(book, `${book.name}.epub`, onUpdate) as ArrayBuffer;
+  }
+
   async loadBook(book: IBook): Promise<IBookContent> {
-    const {fs} = bk.worker;
-    const bookFp = `${book.hash}/${book.name}.epub`;
-
-    const config = await this.syncBook(book);
-    const pages = await fs.exists(`${book.hash}/pages.json`, 'Books') &&
-      await fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string;
-
-    return {
-      content: await fs.readFile(bookFp, 'binary', 'Books') as ArrayBuffer,
-      config, pages
-    }
+    await this._writes;
+    let config = JSON.parse(await bk.worker.fs.readFile(`${book.hash}/config.json`, 'utf8', 'Books') as string);
+    try { config = await this.syncBook(book); } catch (error) { /* The local copy remains readable. */ }
+    const pages = await bk.worker.fs.exists(`${book.hash}/pages.json`, 'Books') ?
+      await bk.worker.fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string : undefined;
+    return {content: await bk.worker.fs.readFile(`${book.hash}/${book.name}.epub`, 'binary', 'Books') as ArrayBuffer,
+      config: {...config, ts: config.ts || 0, lastProgress: config.lastProgress ?? config.progress}, pages};
   }
 
   async savePages(book: IBook, pages: string[]) {
-    return await bk.worker.fs.writeFile(`${book.hash}/pages.json`, JSON.stringify(pages), 'Books');
+    await this._write(`${book.hash}/pages.json`, JSON.stringify(pages));
   }
 
   public async syncBook(book: IBook, config?: IBookConfig): Promise<IBookConfig> {
-    if (!config) {
-      config = JSON.parse(await bk.worker.fs.readFile(`${book.hash}/config.json`, 'utf8', 'Books') as string);
-    }
-
+    if (config) { await this.saveConfig(book, config); }
+    await this._writes;
     if (!this.connected) {
-      if (!this._connectWarnShowed) {
-        await bk.worker.showMessage('未连接到服务器时，仅使用本地笔记（仅提示一次）', 'info');
-        this._connectWarnShowed = true;
-      }
-      return config;
+      return JSON.parse(await bk.worker.fs.readFile(`${book.hash}/config.json`, 'utf8', 'Books') as string);
     }
-
-    const remote = JSON.parse(await this._client.getFileContents(getRemote(`${book.hash}/config.json`), {format: 'text'}) as string);
-    config = this._mergeConfig(config, remote);
-    
-    await bk.worker.fs.writeFile(`${book.hash}/config.json`, JSON.stringify(config), 'Books');
-    config.removedTs = remote.removedTs;
-    await this._client.putFileContents(getRemote(`${book.hash}/config.json`), JSON.stringify(config), {overwrite: true});
-
-    return config;
+    return this._runSync(() => this._syncBookNow(book));
   }
 
-  private _mergeConfig(local: IBookConfig, remote: IBookConfig): IBookConfig {
-    const localTS = local.ts || Date.now();
-    const remoteTS = remote.ts || Date.now();
-    remote.removedTs = remote.removedTs || {};
-    local.lastProgress = local.lastProgress || local.progress;
-    remote.lastProgress = remote.lastProgress || remote.progress;
-    local.ts = Math.max(localTS, remoteTS);
-    local.lastProgress = localTS > remoteTS ? local.lastProgress : remote.lastProgress;
-    local.notes = this._mergeNotes(local.notes, remote.notes, remote.removedTs);
-    local.bookmarks = this._mergeNotes(local.bookmarks, remote.bookmarks, remote.removedTs);
-
-    return local;
+  private async _syncBookNow(book: IBook): Promise<IBookConfig> {
+    const path = `${book.hash}/config.json`;
+    await this._writes;
+    const revision = this._state.pendingBooks[book.hash];
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const previous = await this._readRemote(path);
+      const local = JSON.parse(await bk.worker.fs.readFile(path, 'utf8', 'Books') as string);
+      const config = previous.value ? mergeConfig(local, previous.value) : local;
+      if (!previous.value && !(await this._client.exists(this._remotePath(book.hash)))) {
+        await this._client.createDirectory(this._remotePath(book.hash));
+      }
+      try {
+        await this._putRemote(path, config, previous);
+        await this._writes;
+        const latest = JSON.parse(await bk.worker.fs.readFile(path, 'utf8', 'Books') as string);
+        const result = mergeConfig(latest, config);
+        await this._write(path, JSON.stringify(result));
+        if (revision === this._state.pendingBooks[book.hash]) {
+          const pendingBooks = {...this._state.pendingBooks};
+          delete pendingBooks[book.hash];
+          this._publish({pendingBooks});
+        }
+        return result;
+      } catch (error) {
+        if (!this._isConflict(error) || attempt === 2) { throw error; }
+      }
+    }
+    throw new Error('同步冲突，请重试。');
   }
-  
+
   public async syncBookshelf(books?: IBook[]): Promise<Array<string | null>> {
-    if (!books) {
-      books = JSON.parse(await bk.worker.fs.readFile('books.json', 'utf8', 'Books') as string);
-    }
-    if (this.connected) {
-      const remote = JSON.parse(await this._client.getFileContents(getRemote('books.json'), {format: 'text'}) as string);
-      const remoteTable: {[hash: string]: IBook} = {};
-      remote.forEach(book => remoteTable[book.hash] = book);
-      books.forEach(book => {
-        const remoteBook = remoteTable[book.hash];
-        if (remoteBook && remoteBook.bookshelf) {
-          const localTS = book.ts || 0;
-          const remoteTS = remoteBook.ts || 0;
-          if (remoteTS > localTS) {
-            book.bookshelf = remoteBook.bookshelf;
-          } else {
-            remoteBook.bookshelf = book.bookshelf;
-          }
-        }
-      });
-      await this._client.putFileContents(getRemote('books.json'), JSON.stringify(books), {overwrite: true});
-    }
-    await bk.worker.fs.writeFile('books.json', JSON.stringify(books), 'Books');
-    return books.map(book => book.bookshelf?.value || null);
+    books = books || JSON.parse(await bk.worker.fs.readFile('books.json', 'utf8', 'Books') as string);
+    await this.saveBooks(books);
+    const merged = await this.syncBooks(books);
+    return merged.filter(book => !book.removed).map(book => book.bookshelf?.value || null);
   }
 
-  private _mergeNotes(localNotes: IBookNote[], remoteNotes: IBookNote[], removedTs: {[cfi: string]: number}): IBookNote[] {
-    const res: IBookNote[] = [];
-    let localIndex: number = 0;
-    let remoteIndex: number = 0;
-    let pre: IBookNote;
-    let less: IBookNote;
-    let preRemoved: IBookNote;
-
-    while (localIndex < localNotes.length || remoteIndex < remoteNotes.length) {
-      const local = localNotes[localIndex];
-      const remote = remoteNotes[remoteIndex];
-
-      // `parser.compare`实现有问题，不能直接比较`cfiRange`
-      const comp: number = !local ? 1 : !remote ? -1 : parser.compare(local.start, remote.start);
-      if (comp === 0) {
-        if (local.modified < remote.modified) {
-          less = remote;
-          remoteIndex += 1;  
-        } else {
-          less = local;
-          localIndex += 1;  
-        }
-      } else if (comp === 1) {
-        less = remote;
-        remoteIndex += 1;
-      } else {
-        less = local;
-        localIndex += 1;
-      }
-
-      // local
-      if (less.removed) {
-        removedTs[less.cfi] = Math.max(less.removed, removedTs[less.cfi] || 0);
-        preRemoved = less;
-        continue;
-      }
-
-      // remote
-      if (preRemoved?.cfi === less.cfi) {
-        if ((removedTs[less.cfi] || 0) > less.modified) {
-          continue;
-        }
-      }
-
-      // remote
-      if (pre?.cfi === less.cfi) {
-        pre.modified = Math.max(pre.modified, less.modified);
-        continue;
-      }
-
-      if ((removedTs[less.cfi] || 0) > less.modified) {
-        continue;
-      }
-
-      res.push(less);
-      pre = less;
-    }
-
-    return res;
-  }
+  private _mergeNotes = mergeNotes;
 
   public async saveConfig(book: IBook, config: IBookConfig) {
-    await bk.worker.fs.writeFile(`${book.hash}/config.json`, JSON.stringify(config), 'Books');
+    await this._write(`${book.hash}/config.json`, JSON.stringify(config));
+    await this._pending(book.hash);
   }
 
   public async setBookToTop(books: IBook[], index: number) {
     const book = books[index];
     books.splice(index, 1);
     books.splice(0, 0, book);
-
-    await bk.worker.fs.writeFile('books.json', JSON.stringify(books), 'Books');
+    await this.saveBooks(books, false);
   }
 
   public async addBook(fp: string, books: IBook[]): Promise<IBook[]> {
@@ -428,11 +418,12 @@ class WebDAV {
       }
       const metadata = await epub.loaded.metadata;
       const name = metadata.title;
+      if (!name || /[\\/\u0000]/.test(name)) { throw new Error('书名为空或包含不支持的路径字符。'); }
       const author = metadata.creator;
 
       if (!book) {
         !(await fs.exists(hash, 'Books')) && await fs.createDir(hash, 'Books');
-        await fs.writeFile(`${hash}/config.json`, '{"progress": 0,"notes": [],"bookmarks":[]}', 'Books');
+        await fs.writeFile(`${hash}/config.json`, '{"ts":0,"lastProgress":0,"progress":0,"notes":[],"bookmarks":[]}', 'Books');
         await fs.writeFile(`${hash}/${name}.epub`, content, 'Books');
         cover && await fs.writeFile(`${hash}/cover.png`, cover, 'Books');
         books.splice(0, 0, {
@@ -449,12 +440,14 @@ class WebDAV {
         delete book.removed;
         book.ts = Date.now();
       }
+      await fillBookCover(books.find(item => item.hash === hash));
     } catch (error) {
       throw error;
     } finally {
       epub.destroy();
     }
 
+    await this.saveBooks(books);
     return books;
   }
 
@@ -472,6 +465,7 @@ class WebDAV {
 
     book.removed = true;
     book.ts = Date.now();
+    await this.saveBooks(books);
 
     return books;
   }
@@ -570,7 +564,7 @@ class WebDAV {
     const config = JSON.parse(await fs.readFile(fp, 'utf8', 'Books') as string) as IBookConfig;
     config.notes = this._mergeNotes(config.notes, notes, {});
     const configStr = JSON.stringify(config);
-    await fs.writeFile(fp, configStr, 'Books');
+    await this.saveConfig(book, config);
 
     if (!this._client) {
       showMessage('服务器未连接，暂不同步到远端...', 'warning');
@@ -584,6 +578,7 @@ class WebDAV {
       showMessage('同步到远端失败，请手动重试...', 'error');
     }
 
+    epub.destroy();
     return failed;
   }
 }

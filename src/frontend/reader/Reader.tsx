@@ -22,13 +22,13 @@ import {IReadSettings} from '../../interfaces';
 
 export interface IReaderProps {
   book: IBook;
-  onClose(config: IBookConfig): void;
+  onClose(config?: IBookConfig): void;
+  onConnect(): Promise<void>;
+  syncRequest: number;
 }
 
 type TState = 'Init' | 'Loading' | 'Parser' | 'Ready';
 
-let jump: (action: EJumpAction, cfiOrPageOrIndex?: string | number | IBookIndex) => void;
-let syncNotes: (preNotes: IBookNote[], notes: IBookNote[]) => void;
 export default function Reader(props: IReaderProps) {
   const [state, setState] = React.useState<TState>('Init');
   const [readSettings, setReadSettings] = React.useState<IReadSettings>();
@@ -36,14 +36,15 @@ export default function Reader(props: IReaderProps) {
   const [content, setContent] = React.useState<ArrayBuffer>();
   const [pages, setPages] = React.useState<string>();
   const [pagesLen, setPagesLen] = React.useState<number>(0);
-  const [bookmarks, setBookmarks] = React.useState<IBookNote[]>([]);
-  const [notes, setNotes] = React.useState<IBookNote[]>([]);
+  const [config, setConfig] = React.useState<IBookConfig>();
+  const latest = React.useRef<IBookConfig>();
+  const jump = React.useRef<(action: EJumpAction, target?: string | number | IBookIndex) => void>();
+  const syncNotes = React.useRef<(previous: IBookNote[], next: IBookNote[]) => void>();
+  const {bookmarks = [], notes = [], progress = 0, lastProgress = 0, ts = 0} = config || {};
   const [indexes, setIndexes] = React.useState<IBookIndex[]>();
   const [currentIndex, setCurrentIndex] = React.useState<IBookIndex>();
   const [range, setRange] = React.useState<{start: number, max: number}>();
-  const [progress, setProgress] = React.useState<number>(1);
-  const [lastProgress, setLastProgress] = React.useState<number>(1);
-  const [ts, setTs] = React.useState<number>(0);
+  const [error, setError] = React.useState('');
   const [showJumpModal, setShowJumpModal] = React.useState<boolean>(false);
   const [bookmarkInfo, setBookmarkInfo] = React.useState<IBookNote>();
   const [bookmarkStatus, setBookmarkStatus] = React.useState<INoteMarkStatus>();
@@ -51,9 +52,34 @@ export default function Reader(props: IReaderProps) {
   const [showNotes, setShowNotes] = React.useState<boolean>(false);
   const [loadingInfo, setLoadingInfo] = React.useState<string>('');
 
-  const saveConfig = () => webdav.saveConfig(props.book, {
-    ts, lastProgress: progress, progress, notes, bookmarks
-  });
+  const saveConfig = () => latest.current ? webdav.saveConfig(props.book, latest.current) : Promise.resolve();
+  const updateConfig = (patch: Partial<IBookConfig>) => {
+    if (!latest.current) { return; }
+    latest.current = {...latest.current, ...patch};
+    setConfig(latest.current);
+    saveConfig().catch(error => setError(`保存失败：${error.message || error}`));
+  };
+  const synchronize = async () => {
+    if (!latest.current) { return; }
+    setLoadingInfo('同步中…');
+    try {
+      await saveConfig();
+      await props.onConnect();
+      const result = await webdav.syncBook(props.book);
+      syncNotes.current?.(latest.current.notes, result.notes);
+      latest.current = result;
+      setConfig(result);
+    } catch (error) {
+      bk.worker.showMessage(`同步未完成，已保留本机数据：${error.message || error}`, 'warning');
+    } finally { setLoadingInfo(''); }
+  };
+  const previousSyncRequest = React.useRef(props.syncRequest);
+  React.useEffect(() => {
+    if (props.syncRequest !== previousSyncRequest.current) {
+      previousSyncRequest.current = props.syncRequest;
+      synchronize();
+    }
+  }, [props.syncRequest]);
 
   const applyReadSettings = async (rSettings: IReadSettings) => {
     const {background, highlight} = rSettings;
@@ -69,38 +95,37 @@ export default function Reader(props: IReaderProps) {
   }
 
   React.useEffect(() => {
-    if (state === 'Init') {
-      setState('Loading');
-      setLoadingInfo(`书籍《${props.book.name}》加载中...若首次打开可能需要较长时间。`);
-      
-      bk.worker.loadSettings().then(settings => {
-        applyReadSettings(settings.read);
-        return webdav.loadBook(props.book);
-      }).then(book => {
-        setContent(book.content);
-        setPages(book.pages);
-        setBookmarks(book.config.bookmarks);
-        setNotes(book.config.notes);
-        setProgress(book.config.progress);
-        setLastProgress(book.config.lastProgress);
-        setTs(book.config.ts);
+    let active = true;
+    setState('Loading');
+    setLoadingInfo(`书籍《${props.book.name}》加载中…`);
+    bk.worker.onAppHide(() => { saveConfig().catch(error => setError(`保存失败：${error.message || error}`)); });
+    (async () => {
+      try {
+        const settings = await bk.worker.loadSettings();
+        await applyReadSettings(settings.read);
+        const loaded = await webdav.loadBook(props.book);
+        if (!active) { return; }
+        latest.current = loaded.config;
+        setConfig(loaded.config);
+        setContent(loaded.content);
+        setPages(loaded.pages);
         setState('Ready');
-
-        bk.worker.onAppHide(saveConfig);
-      }).catch(error => {
-        console.error(error);
-      });
-
-      return;
-    }
-  });
+      } catch (error) {
+        if (active) { setError(`加载失败：${error.message || error}`); setLoadingInfo(''); }
+      }
+    })();
+    return () => { active = false; bk.worker.onAppHide(() => {}); };
+  }, [props.book.hash]);
 
   return (
     <div
       className={css.reader}
       style={{background: readSettings?.background}}
-      onBlur={saveConfig}
+      onBlur={() => { saveConfig().catch(error => setError(`保存失败：${error.message || error}`)); }}
     >
+      {error && <div className={css.readerError} role='alert'>
+        <p>{error}</p><button onClick={() => props.onClose(latest.current)}>返回书库</button>
+      </div>}
       {
         state === 'Ready' && (
           <>
@@ -113,27 +138,17 @@ export default function Reader(props: IReaderProps) {
                 bookmarkStatus={bookmarkStatus}
                 onUpdateSettings={async rSettings => {
                   setLoadingInfo('阅读设置应用中...');
-                  const settings =  await bk.worker.loadSettings()
-                  settings.read = rSettings;
-                  await bk.worker.saveSettings(settings);
-                  await applyReadSettings(rSettings);
-                  setLoadingInfo('');
+                  try {
+                    const settings = await bk.worker.loadSettings();
+                    settings.read = rSettings;
+                    await bk.worker.saveSettings(settings);
+                    await applyReadSettings(rSettings);
+                  } catch (error) {
+                    setError(`保存设置失败：${error.message || error}`);
+                  } finally { setLoadingInfo(''); }
                 }}
-                onReturn={() => {
-                  bk.worker.onAppHide(() => {});
-                  syncNotes = undefined;
-                  jump = undefined;
-                  props.onClose({ts: Date.now(), lastProgress: progress, progress, notes, bookmarks});
-                }}
-                onSync={async () => {
-                  setLoadingInfo('同步中...');
-                  const config = await webdav.syncBook(props.book, {ts, lastProgress, progress, notes, bookmarks});
-                  syncNotes(notes, config.notes);
-                  setBookmarks(config.bookmarks);
-                  setNotes(config.notes);
-                  setLastProgress(config.lastProgress);
-                  setLoadingInfo('');
-                }}
+                onReturn={() => props.onClose(latest.current)}
+                onSync={synchronize}
                 onIndexes={() => {
                   setShowIndexes(!showIndexes);
                   setShowNotes(false);
@@ -144,7 +159,7 @@ export default function Reader(props: IReaderProps) {
                 }}
                 onBookmark={() => {
                   setBookmarkStatus(changeNote(bookmarks, bookmarkInfo, bookmarkStatus));
-                  saveConfig();
+                  updateConfig({bookmarks: [...bookmarks]});
                 }}
               />
             </div>
@@ -169,7 +184,7 @@ export default function Reader(props: IReaderProps) {
                         indexes={indexes}
                         current={currentIndex}
                         onSelect={index => {
-                          jump(EJumpAction.Index, index);
+                          jump.current?.(EJumpAction.Index, index);
                           setCurrentIndex(index);
                         }}
                       />
@@ -178,7 +193,8 @@ export default function Reader(props: IReaderProps) {
                         bookmarks={bookmarks}
                         notes={notes}
                         pagesLen={pagesLen}
-                        onJump={note => jump?.(EJumpAction.CFI, note.start)}
+                        onChangeNotes={next => updateConfig({notes: [...next]})}
+                        onJump={note => jump.current?.(EJumpAction.CFI, note.start)}
                       />    
                     ) : null
                   }
@@ -190,6 +206,7 @@ export default function Reader(props: IReaderProps) {
                 pages={pages}
                 bookmarks={bookmarks}
                 notes={notes}
+                onError={error => { setError(`阅读器错误：${error.message || error}`); setLoadingInfo(''); }}
                 onLoad={async (indexes, pgs, jumpTo, syncNotesX) => {
                   if (!pages) {
                     await webdav.savePages(props.book, pgs);
@@ -197,10 +214,10 @@ export default function Reader(props: IReaderProps) {
                   setPagesLen(pgs.length);
                   setIndexes(indexes);
                   setCurrentIndex(indexes[0]);
-                  setRange({start: 1, max: pgs.length});
-                  jump = jumpTo;
-                  syncNotes = syncNotesX;
-                  jump(EJumpAction.Page, progress);
+                  setRange({start: 0, max: Math.max(0, pgs.length - 1)});
+                  jump.current = jumpTo;
+                  syncNotes.current = syncNotesX;
+                  jump.current?.(EJumpAction.Page, progress);
 
                   if (lastProgress !== progress) {
                     setShowJumpModal(true);
@@ -215,14 +232,11 @@ export default function Reader(props: IReaderProps) {
                   }
 
                   if (withProgress) {
-                    setTs(Date.now());
-                    setProgress(info.page);
-                    setLastProgress(info.page);
+                    updateConfig({ts: Date.now(), progress: info.page, lastProgress: info.page});
                   }
                 }}
                 onChangeNotes={newNotes => {
-                  setNotes(newNotes);
-                  saveConfig();
+                  updateConfig({notes: [...newNotes]});
                 }}
               />
               {
@@ -232,13 +246,11 @@ export default function Reader(props: IReaderProps) {
                     start={range.start}
                     max={range.max}
                     current={progress}
-                    onPre={() => jump(EJumpAction.Pre)}
-                    onNext={() => jump(EJumpAction.Next)}
+                    onPre={() => jump.current?.(EJumpAction.Pre)}
+                    onNext={() => jump.current?.(EJumpAction.Next)}
                     onJump={p => {
-                      setTs(Date.now());
-                      setProgress(p);
-                      setLastProgress(p);
-                      jump(EJumpAction.Page, p)
+                      updateConfig({ts: Date.now(), progress: p, lastProgress: p});
+                      jump.current?.(EJumpAction.Page, p)
                     }}
                   />
                 )
@@ -259,12 +271,12 @@ export default function Reader(props: IReaderProps) {
         show={showJumpModal}
         closeOnClickBg={false}
         confirm={() => {
-          jump(EJumpAction.Page, lastProgress);
-          setProgress(lastProgress);
+          jump.current?.(EJumpAction.Page, lastProgress);
+          updateConfig({ts: Date.now(), progress: lastProgress, lastProgress});
           setShowJumpModal(false);
         }}
         cancel={() => {
-          setLastProgress(progress);
+          updateConfig({ts: Date.now(), lastProgress: progress});
           setShowJumpModal(false);
         }}
       >

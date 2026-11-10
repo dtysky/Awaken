@@ -7,6 +7,8 @@
 .app {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading {
@@ -17,3 +19,24 @@
   align-items: center;
   font-size: 2rem;
 }
+
+.content { position: relative; flex: 1; min-height: 0; }
+.initError { padding: 2rem; color: #933; }
+.syncStatus {
+  flex: none;
+  padding: 0.65rem 5%;
+  background: #f6faf7;
+  border-bottom: 1px solid #dbe5df;
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #286b4a;
+  > div { min-width: 0; }
+  strong { font-weight: 500; }
+  span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70vw; }
+  button { flex: none; padding: 0.35rem 0.6rem; background: white; color: #286b4a; border: 1px solid #599e7a; border-radius: 4px; cursor: pointer; }
+}
+.syncDetail { color: #66736c; margin-top: 0.2rem; }
+.syncError { color: #a32b2b; }

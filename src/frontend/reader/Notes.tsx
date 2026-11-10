@@ -16,6 +16,7 @@ interface INotesProps {
   notes: IBookNote[];
   pagesLen: number;
   onJump(note: IBookNote): void;
+  onChangeNotes(notes: IBookNote[]): void;
 }
 
 export function Notes(props: INotesProps) {
@@ -61,6 +62,7 @@ export function Notes(props: INotesProps) {
                   type='edit'
                   onClick={() => {
                     setNoteIndex(index);
+                    setAnnotation(item.annotation || '');
                     setShowModal(true);
                   }}
                 />
@@ -87,6 +89,7 @@ export function Notes(props: INotesProps) {
           const note = props.notes[noteIndex];
           note.annotation = annotation;
           changeNote(props.notes, note, {exist: true, index: noteIndex}, ENoteAction.Update);
+          props.onChangeNotes([...props.notes]);
           setShowModal(false);
         }}
         cancel={() => {

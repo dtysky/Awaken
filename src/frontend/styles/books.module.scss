@@ -17,12 +17,15 @@
   left: 5%;
   top: 1rem;
   display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
   justify-content: start;
   align-items: center;
   font-size: 1.4rem;
 }
 
 .menuItem {
+  flex-shrink: 0;
   margin: 0 0.3rem;
   color: #444;
   font-size: 1rem;
@@ -38,6 +41,8 @@
   width: 90%;
   left: 5%;
   top: 4rem;
+  bottom: 0;
+  align-content: flex-start;
   padding-bottom: 2rem;
   overflow: auto;
   display: flex;
@@ -52,6 +57,7 @@
   max-width: 15rem;
   max-height: 20rem;
   margin-top: 1rem;
+  margin-bottom: 4rem;
   margin-right: 4vw;
   cursor: pointer;
   background-size: cover;
@@ -155,3 +161,19 @@
 .bookshelfButtonActive {
   color: #6cd4a4;
 }
+.downloadStatus {
+  position: absolute;
+  top: 100%;
+  width: 100%;
+  padding-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  color: #555;
+  font-size: 0.75rem;
+  cursor: default;
+  button { border: 1px solid #599e7a; color: #286b4a; background: #fff; border-radius: 4px; cursor: pointer; padding: 0.25rem 0.4rem; }
+  button:disabled { cursor: wait; opacity: 0.6; }
+}
+.downloadError { color: #a32b2b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

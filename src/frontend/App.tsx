@@ -1,275 +1,183 @@
-/**
- * @File   : App.tsx
- * @Author : dtysky (dtysky@outlook.com)
- * @Link   : dtysky.moe
- * @Date   : 2022/9/16 23:07:42
- */
 import * as React from 'react';
-import { Loading, Modal } from 'hana-ui';
-
+import {Loading, Modal} from 'hana-ui';
 import bk from '../backend';
 import Reader from './reader/Reader';
-import { IBook, IBookConfig } from '../interfaces/protocols';
+import {IBook, IBookConfig} from '../interfaces/protocols';
 import Books from './books/Books';
-import {
-  loadSettings, saveSettings, loadBooks,
-  selectFolder, selectNote
-} from './utils';
+import {loadSettings, saveSettings, loadBooks, selectFolder, selectNote} from './utils';
 import webdav from './webdav';
-import { ISystemSettings } from '../interfaces';
-
+import {ISystemSettings} from '../interfaces';
+import SyncStatus from './SyncStatus';
 import css from './styles/app.module.scss';
 import './styles/global.scss';
 
-type TState = 'Init' | 'Loading' | 'Books' | 'Reader';
-
 export default function App() {
   const [settings, setSettings] = React.useState<ISystemSettings>();
-  const [books, setBooks] = React.useState<IBook[]>();
-  const [state, setState] = React.useState<TState>('Init');
-  const [current, setCurrent] = React.useState<number>(0);
-  const [loadingInfo, setLoadingInfo] = React.useState<string>();
-  const [showModal, setShowModal] = React.useState<boolean>(false);
+  const [books, setBooks] = React.useState<IBook[]>([]);
+  const [current, setCurrent] = React.useState<string>();
+  const [loadingInfo, setLoadingInfo] = React.useState('初始化…');
+  const [error, setError] = React.useState('');
+  const [attempt, setAttempt] = React.useState(0);
+  const [showConnect, setShowConnect] = React.useState(false);
   const [bookshelfList, setBookshelfList] = React.useState<string[]>([]);
+  const [downloaded, setDownloaded] = React.useState<{[hash: string]: boolean}>({});
+  const [syncRequest, setSyncRequest] = React.useState(0);
+  const busy = React.useRef(false);
+  const retryAll = React.useRef(false);
+  const currentBook = books.find(book => book.hash === current);
+
+  async function refresh(next: IBook[]) {
+    setBooks([...next]);
+    setBookshelfList(previous => Array.from(new Set([...previous,
+      ...next.filter(book => !book.removed).map(book => book.bookshelf?.value).filter(Boolean)])));
+    const entries = await Promise.all(next.filter(book => !book.removed).map(async book =>
+      [book.hash, await webdav.isDownloaded(book)] as [string, boolean]));
+    setDownloaded(Object.fromEntries(entries));
+  }
 
   React.useEffect(() => {
-    if (state === 'Init') {
-      setState('Loading');
-      setLoadingInfo('初始化......');
-      loadSettings().then(s => {
-        let promise = new Promise<void>(resolve => resolve());
-        if (!s.folder) {
-          promise = selectFolder(true).then(folder => {
-            console.log(folder)
-            if (!folder) {
-              throw new Error('必须选择一个文件夹！请退出应用后重新进入！')
-            }
-
-            s.folder = folder;
-            return saveSettings(s);
-          });
+    let active = true;
+    (async () => {
+      setError('');
+      setLoadingInfo('初始化…');
+      try {
+        const saved = await loadSettings();
+        if (!saved.folder) {
+          saved.folder = await selectFolder(true);
+          await saveSettings(saved);
         }
-
-        promise
-          .then(() => webdav.changeLocal(s.folder))
-          .then(() => {
-            setSettings(s);
-            return loadBooks();
-          })
-          .then(bks => {
-            setBooks(bks);
-            setState('Books');
-            setLoadingInfo('加载书架信息...');
-            webdav.syncBookshelf().then(bsList => {
-              setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
-              setLoadingInfo('');
-            });
-            if (s.webDav.url) {
-              setShowModal(true);
-            }
-          })
-          .catch(error => {
-            bk.worker.showMessage(`初始化失败：${error.message}`, 'error');
-          });
-        })
+        await webdav.changeLocal(saved.folder);
+        await webdav.initialize();
+        const cached = await loadBooks();
+        if (!active) { return; }
+        setSettings(saved);
+        await refresh(cached);
+        setShowConnect(!!saved.webDav.url);
+      } catch (error) {
+        if (active) { setError(`初始化失败：${error.message || error}`); }
+      } finally {
+        if (active) { setLoadingInfo(''); }
       }
-  });
+    })();
+    return () => { active = false; };
+  }, [attempt]);
 
-  return (
-    <div className={css.app}>
-      {state === 'Loading' && (
-        <div className={css.loading}>
-        </div>
-      )}
-      {state === 'Books' && (
-        <Books
-          bookshelfList={[bookshelfList, setBookshelfList]}
-          settings={settings}
-          books={[books, setBooks]}
-          onSelect={async index => {
-            setLoadingInfo('书籍打开中...');
-            try {
-              await webdav.checkAndDownloadBook(books[index], setLoadingInfo);
-              setCurrent(index);
-              setState('Reader');
-              setLoadingInfo('');
-            } catch (error) {
-              bk.worker.showMessage(error.message, 'error');
-              setLoadingInfo('');
-            }
-          }}
-          onSync={async () => {
-            try {
-              if (!settings.webDav.url) {
-                bk.worker.showMessage('未指定远端服务器地址！', 'error');
-                return;
-              }
+  async function run(message: string, action: () => Promise<void>) {
+    if (busy.current) { return; }
+    busy.current = true;
+    setLoadingInfo(message);
+    try { await action(); }
+    catch (error) { await bk.worker.showMessage(error.message || String(error), 'error'); }
+    finally { busy.current = false; setLoadingInfo(''); }
+  }
 
-              setLoadingInfo('尝试连接中...');
-              if (!webdav.connected) {
-                await webdav.changeRemote(settings.webDav);
-              }
+  async function sync(next = books, config = settings, all = false) {
+    retryAll.current = all;
+    if (!config.webDav.url) { throw new Error('请先在设定中填写 WebDAV 地址。'); }
+    if (!webdav.connected) { await webdav.changeRemote(config.webDav); }
+    try {
+      if (all) { await webdav.syncAllBooks(next, setLoadingInfo); }
+      else { await webdav.syncBooks(next, setLoadingInfo); }
+    }
+    finally { await refresh(next); }
+  }
 
-              const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
+  async function saveAndSync(next: IBook[]) {
+    await refresh(next);
+    if (webdav.connected) { await sync(next); }
+  }
 
-              setBooks(bks);
-              setLoadingInfo('加载书架信息...');
-              webdav.syncBookshelf().then(bsList => {
-                setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
-                setLoadingInfo('');
-              });
-            } catch (error) {
-              bk.worker.showMessage(`${error.message || error}`, 'error');
-              setLoadingInfo('');
-            }
-          }}
-          onAddBooks={async files => {
-            if (!webdav.connected) {
-              bk.worker.showMessage(`未连接到服务器，仅会添加到本地，待到连接时同步。`, 'warning');
-            }
+  async function download(book: IBook) {
+    if (!(await webdav.isDownloaded(book))) {
+      if (!webdav.connected && settings.webDav.url) { await webdav.changeRemote(settings.webDav); }
+      await webdav.checkAndDownloadBook(book);
+    }
+    setDownloaded(previous => ({...previous, [book.hash]: true}));
+  }
 
-            setLoadingInfo('准备添加书籍...');
-            const invalid: string[] = [];
-            for (const file of files) {
-              setLoadingInfo(`${file} 添加中...`);
-              try {
-                await webdav.addBook(file, books);
-              } catch (error) {
-                console.error(error)
-                invalid.push(error.message);
-              }
+  async function closeReader(config?: IBookConfig) {
+    await run('保存阅读进度…', async () => {
+      if (config) {
+        await webdav.saveConfig(currentBook, config);
+        try { await webdav.syncBook(currentBook); } catch (error) { /* Retry remains available in the status bar. */ }
+      }
+      await webdav.setBookToTop(books, books.findIndex(book => book.hash === current));
+      await bk.worker.setBackground(1, 1, 1);
+      setSettings(await loadSettings());
+      setCurrent(undefined);
+      await refresh(books);
+    });
+  }
 
-              if (invalid.length) {
-                bk.worker.showMessage(invalid.join('\n'), 'error', '以下书籍添加报错');
-              }
-            }
-
-            if (webdav.connected) {
-              const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
-              setBooks(bks);
-            } else {
-              setBooks(books);
-            }
-
-            setLoadingInfo('');
-          }}
-          onRemoveBook={async book => {
-            setLoadingInfo('等待删除书籍...');
-            let bks = await webdav.removeBook(book, books);
-            bks = await webdav.syncBooks(bks, info => setLoadingInfo(info));
-            setBooks(bks);
-            setLoadingInfo('');
-          }}
-          onImportBookNotes={async book => {
-            const fp = (await selectNote())[0];
-            if (!fp) {
-              return;
-            }
-
-            setLoadingInfo('开始导入笔记...');
-
-            try {
-              const failed = await webdav.importNotes(book, fp, setLoadingInfo);
-              if (failed.length) {
-                const str = failed.join('\n');
-                navigator.clipboard.writeText(str);
-                bk.worker.showMessage(`以下笔记自动导入失败，但已复制到剪切板，请手动标记（页数和位置为Kindle的，不是本软件的，供参考）：\n\n${str}`, 'warning');
-              }
-            } catch (error) {
-              console.error(error)
-              bk.worker.showMessage(`导入失败：${error.message}`, 'error');
-            }
-
-            setLoadingInfo('');
-          }}
-          onUpdateSettings={async s => {
-            let webDavChanged = settings.webDav.url !== s.webDav.url ||
-              settings.webDav.user !== s.webDav.user;
-            let folderChanged = settings.folder !== s.folder;
-
-            if (!webDavChanged && !folderChanged) {
-              setSettings(s);
-              return;
-            }
-
-            if (folderChanged) {
-              setLoadingInfo('修改书籍目录，拷贝文件...');
-              try {
-                await webdav.changeLocal(s.folder, info => setLoadingInfo(info));
-              } catch (error) {
-                s.folder = settings.folder;
-                console.error(error, s);
-                bk.worker.showMessage(`修改本地目录失败： ${error.message || error}`, 'error');
-              }
-            }
-
-            if (webDavChanged) {
-              setLoadingInfo('连接服务器...');
-              try {
-                await webdav.changeRemote(s.webDav);
-                setLoadingInfo('连接成功，开始同步文件...');
-                const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
-                setBooks(bks);
-              } catch (error) {
-                s.webDav = Object.assign({}, settings.webDav);
-                bk.worker.showMessage(`${error.message || error}`, 'error');
-              }
-            }
-
-            await saveSettings(s);
-            setSettings(s);
-            setLoadingInfo('');
-          }}
-        />
-      )}
-      {state === 'Reader' && (
-        <Reader
-          book={books[current]}
-          onClose={async bookConfig => {
-            setLoadingInfo('合并与同步笔记和进度到远端...');
-            await webdav.syncBook(books[current], bookConfig);
-            await webdav.setBookToTop(books, current);
-            bk.worker.setBackground(1, 1, 1);
-            setState('Books');
-            setLoadingInfo('');
-          }}
-        />
-      )}
-
-      {loadingInfo && (
-        <Loading
-          mode='queue'
-          content={loadingInfo}
-        />
-      )}
-
-      <Modal
-        show={showModal}
-        closeOnClickBg={false}
-        title={'是否连接到服务器？'}
-        confirm={async () => {
-          setLoadingInfo('尝试连接中...');
-          setShowModal(false);
-          try {
-            await webdav.changeRemote(settings.webDav);
-            const bks = await webdav.syncBooks(books, info => setLoadingInfo(info));
-            setBooks(bks);
-            setLoadingInfo('加载书架信息...');
-            webdav.syncBookshelf().then(bsList => {
-              setBookshelfList(Array.from(new Set(bsList.filter(bs => !!bs))));
-              setLoadingInfo('');
-            });
-          } catch (error) {
-            bk.worker.showMessage(`${error.message || error}`, 'error');
-            setLoadingInfo('');
+  return <div className={css.app}>
+    {settings && <SyncStatus configured={!!settings.webDav.url} onRetry={() => {
+      if (currentBook) { setSyncRequest(value => value + 1); }
+      else { run('同步中…', () => sync(books, settings, retryAll.current || webdav.syncState?.allBooksPending)); }
+    }} />}
+    <div className={css.content}>
+      {error && <div className={css.initError}><p>{error}</p><button onClick={() => setAttempt(value => value + 1)}>重试</button></div>}
+      {settings && !currentBook && <Books
+        bookshelfList={[bookshelfList, setBookshelfList]}
+        settings={settings} books={[books, setBooks]} downloaded={downloaded}
+        onDownload={download}
+        onSelect={index => run('打开书籍…', async () => {
+          await download(books[index]);
+          setCurrent(books[index].hash);
+        })}
+        onSync={() => run('同步中…', () => sync())}
+        onSyncAll={() => run('同步全部书籍…', () => sync(books, settings, true))}
+        onAddBooks={files => run('导入书籍…', async () => {
+          const failures: string[] = [];
+          for (const file of files) {
+            try { await webdav.addBook(file, books); }
+            catch (error) { failures.push(error.message || String(error)); }
           }
-        }}
-        cancel={() => setShowModal(false)}
-      >
-        检测到已保存的远端服务器
-        <br />
-        {settings?.webDav?.url}
-      </Modal>
+          await refresh(books);
+          if (failures.length) { await bk.worker.showMessage(failures.join('\n'), 'error'); }
+          await saveAndSync(books);
+        })}
+        onRemoveBook={book => run('删除书籍…', async () => {
+          await webdav.removeBook(book, books);
+          await saveAndSync(books);
+        })}
+        onMoveBook={(book, shelf) => run('保存书架…', async () => {
+          const next = books.map(item => item.hash === book.hash ?
+            {...item, bookshelf: {value: shelf, ts: Date.now()}} : item);
+          await webdav.saveBooks(next);
+          await saveAndSync(next);
+        })}
+        onImportBookNotes={book => run('导入笔记…', async () => {
+          const file = (await selectNote())[0];
+          if (!file) { return; }
+          const failed = await webdav.importNotes(book, file, setLoadingInfo);
+          if (failed.length) {
+            const text = failed.join('\n');
+            try { await navigator.clipboard.writeText(text); } catch (error) { /* The dialog also contains the text. */ }
+            await bk.worker.showMessage(`以下笔记未能自动匹配，请手动标记：\n${text}`, 'warning');
+          }
+        })}
+        onUpdateSettings={next => run('保存设置…', async () => {
+          const changedRemote = ['url', 'user', 'password'].some(key => settings.webDav[key] !== next.webDav[key]);
+          if (settings.folder !== next.folder) { await webdav.changeLocal(next.folder, setLoadingInfo); }
+          await saveSettings(next);
+          setSettings(next);
+          if (changedRemote) {
+            await webdav.changeRemote(next.webDav);
+            if (next.webDav.url) { await sync(books, next); }
+          }
+        })}
+      />}
+      {currentBook && <Reader key={currentBook.hash} book={currentBook} onClose={closeReader}
+        syncRequest={syncRequest} onConnect={async () => {
+          if (!webdav.connected && settings.webDav.url) { await webdav.changeRemote(settings.webDav); }
+          if (!webdav.connected) { throw new Error('请返回书库，在设定中连接 WebDAV。'); }
+        }} />}
     </div>
-  )
+    {loadingInfo && <Loading mode='queue' content={loadingInfo} />}
+    <Modal show={showConnect} closeOnClickBg={false} title='连接服务器并同步？'
+      confirm={() => { setShowConnect(false); run('连接服务器…', () => sync()); }}
+      cancel={() => setShowConnect(false)}>
+      <p>{settings?.webDav.url}</p><p>取消后仍可阅读已下载的书籍，修改会保存到本机。</p>
+    </Modal>
+  </div>;
 }

@@ -5,32 +5,13 @@
  * @Date   : 2022/10/20 23:29:09
  */
 import * as React from 'react';
-import ePub, {Contents} from 'epubjs';
+import ePub from 'epubjs';
 
-import bk from '../../backend';
-import {mergeCFI, IBookIndex, usePrevious} from './common';
+import {mergeCFI, IBookIndex} from './common';
 import {Tools} from './Tools';
+import {protectBookDocument, protectBookNavigation} from './contentSecurity';
 import {IBookNote} from '../../interfaces/protocols';
 import css from '../styles/reader.module.scss';
-
-const EVENT_NAME = bk.supportChangeFolder ? 'mouseup' : 'touchend';
-(Contents as any).prototype.onSelectionChange = function(e: Event) {
-  const t = this as any;
-
-  if (t.doingSelection) {
-    return;
-  }
-
-  const handler = function() {
-    t.window.removeEventListener(EVENT_NAME, handler);
-    const selection = t.window.getSelection();
-    t.triggerSelectedEvent(selection);
-    t.doingSelection = false;
-  };
-
-  t.window.addEventListener(EVENT_NAME, handler);
-  t.doingSelection = true;
-}
 
 export enum EJumpAction {
   CFI,
@@ -53,6 +34,7 @@ export interface IViewerProps {
   ): void;
   onBookmarkInfo(info: IBookNote, withProgress: boolean): void;
   onChangeNotes(notes: IBookNote[]): void;
+  onError(error: Error): void;
 }
 
 type TState = 'Init' | 'Loading' | 'Ready';
@@ -69,6 +51,10 @@ function convertEPUBIndex(toc: ePub.NavItem, res: IBookIndex[]) {
 }
 
 export function Viewer(props: IViewerProps) {
+  const latestProps = React.useRef(props);
+  latestProps.current = props;
+  const bookRef = React.useRef<ePub.Book>();
+  React.useEffect(() => () => { bookRef.current?.destroy(); }, []);
   const [state, setState] = React.useState<TState>('Init');
   const [content, setContent] = React.useState<ePub.Contents>();
   const [noteCFI, setNoteCFI] = React.useState<string>('');
@@ -76,7 +62,7 @@ export function Viewer(props: IViewerProps) {
 
   function updateProgress(location) {
     const loc = rendition.book.locations.locationFromCfi(location.start.cfi) as unknown as number;
-    props.onBookmarkInfo({
+    latestProps.current.onBookmarkInfo({
       start: location.start.cfi,
       end: location.end.cfi,
       cfi: mergeCFI(location.start.cfi, location.end.cfi),
@@ -88,13 +74,18 @@ export function Viewer(props: IViewerProps) {
     if (state === 'Init') {
       setState('Loading');
       const book = ePub(props.content);
+      bookRef.current = book;
+      book.spine.hooks.content.register(protectBookDocument);
       rendition = book.renderTo('epub-viewer', {
         width: '100%',
         height: '100%',
         stylesheet: props.bookStyle,
+        // Book scripts are blocked by the CSP injected before serialization.
+        // WebKit needs this sandbox flag for the reader's own DOM callbacks.
         allowScriptedContent: true,
-        allowPopups: true
+        allowPopups: false
       } as any);
+      rendition.hooks.content.register(protectBookNavigation);
       setStyle(props.bookStyle);
 
       book.loaded.navigation.then(nav => {
@@ -102,7 +93,7 @@ export function Viewer(props: IViewerProps) {
           new Promise(resolve => resolve(book.locations.load(props.pages))) :
           book.locations.generate(600);
 
-        promise.then(pages => {
+        return promise.then(pages => {
           idToHref = {};
           const indexes: IBookIndex[] = [];
           nav.toc.forEach(t => {
@@ -149,38 +140,51 @@ export function Viewer(props: IViewerProps) {
             }
 
             preNotes.forEach(note => rendition.annotations.remove(note.cfi, 'highlight'));
-            notes.forEach(note => rendition.annotations.add('highlight', note.cfi, undefined, undefined, 'awaken-highlight'));
+            notes.filter(note => !note.removed).forEach(note => rendition.annotations.add('highlight', note.cfi, undefined, undefined, 'awaken-highlight'));
           };
 
           syncNotes([], props.notes);
 
-          rendition.display(rendition.book.locations.cfiFromLocation(0)).then(() => {
-            props.onLoad(indexes, pages, jump, syncNotes);
+          return rendition.display(rendition.book.locations.cfiFromLocation(0)).then(() => {
             setState('Ready');
+            return Promise.resolve(props.onLoad(indexes, pages, jump, syncNotes));
           });
         });
-      });
+      }).catch(props.onError);
 
-      const selectNote = (cfiRange: string) => {
+      const selecting = new WeakSet<ePub.Contents>();
+      const selectNote = (cfiRange: string, selectedContent: ePub.Contents) => {
+        if (!selectedContent || selecting.has(selectedContent)) { return; }
+        setContent(selectedContent);
         setNoteCFI(cfiRange);
-      }
+      };
+      const beginSelection = (_event: Event, selectedContent: ePub.Contents) => {
+        selecting.add(selectedContent);
+      };
+      const endSelection = (_event: Event, selectedContent: ePub.Contents) => {
+        selecting.delete(selectedContent);
+        const selection = selectedContent.window.getSelection();
+        if (selection?.rangeCount && !selection.isCollapsed) {
+          selectNote(selectedContent.cfiFromRange(selection.getRangeAt(0)), selectedContent);
+        }
+      };
 
-      rendition.on('rendered', () => {
-        const c = rendition.getContents()[0];
-        c !== content && setContent(c);
+      // epub.js forwards each chapter's selection with its own Contents. Its
+      // debounced selected event also handles WebKit selectionchange arriving
+      // after mouseup, and selections made with the keyboard.
+      rendition.on('selected', selectNote);
+      rendition.on('mousedown', beginSelection);
+      rendition.on('touchstart', beginSelection);
+      rendition.on('mouseup', endSelection);
+      rendition.on('touchend', endSelection);
+      rendition.on('markClicked', (cfi: string, _data: any, selectedContent: ePub.Contents) => selectNote(cfi, selectedContent));
+
+      rendition.on('rendered', (_section, view) => {
+        const c = view.contents;
         if (process.env.isProd) {
           c.document.body.oncontextmenu = () => false
         }
       });
-
-      rendition.on('locationChanged', () => {
-        content?.off('selected', selectNote);
-        const c = rendition.getContents()[0];
-        c?.on('selected', selectNote);
-        c !== content && setContent(c);
-      });
-
-      rendition.on('markClicked', selectNote);
     } else if (state === 'Ready') {
       if (style !== props.bookStyle) {
         rendition.themes.register('awaken-style', props.bookStyle);
@@ -198,10 +202,9 @@ export function Viewer(props: IViewerProps) {
         rendition={rendition}
         content={content}
         cfi={noteCFI}
-        onChangeNotes={notes => {
-          setNoteCFI('');
-          props.onChangeNotes(notes);
-        }}
+        onChangeNotes={props.onChangeNotes}
+        onClose={() => setNoteCFI('')}
+        onError={props.onError}
       />
     </>
   )

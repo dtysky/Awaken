@@ -1,5 +1,4 @@
 node_modules
-package-lock.json
 dist
 release
 platforms/**/assets
@@ -7,3 +6,4 @@ platforms/**/assets
 test/*
 !test/*.epub
 !test/*.html
+platforms/desktop/target

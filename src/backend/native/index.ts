@@ -151,7 +151,7 @@ export const worker: IWorker = {
     async writeFile(filePath: string, content: string | ArrayBuffer, base: TBaseDir) {
       const isBin = typeof content !== 'string';
 
-      callAPI(
+      return callAPI(
         'void',
         isBin ? 'writeBinaryFile' : 'writeTextFile',
         {filePath, base},
@@ -185,6 +185,7 @@ if (!!jsb) {
       }
 
       const url = config.url.replace(DAV_PREFIX, '');
+      const binary = config.method.toUpperCase() === 'GET' && config.xhr.responseType === 'arraybuffer';
 
       if (config.body && platform === 'ANDROID') {
         const isBase64 = typeof config.body !== 'string';
@@ -198,22 +199,21 @@ if (!!jsb) {
         headers: config.headers
       }).then(res => {
         const errorMessage = res.headers.get('X-Error-Message');
-        if (errorMessage) {
+        if (errorMessage && res.ok) {
           throw new Error(`${errorMessage}: webdav(${url})`);
         }
 
-        return (/(png|epub)$/.test(url) ? res.arrayBuffer() : res.text()).then(data => {
+        return (binary ? res.arrayBuffer() : res.text()).then(data => {
           handler.resolve({
             config: config,
             status: res.status,
             statusText: res.statusText,
-            headers: res.headers,
+            headers: Object.fromEntries(res.headers.entries()),
             response: data
           });
         });
-      }).catch(error => {
-        console.error(error);
-        handler.reject(error);
+      }).catch(() => {
+        handler.reject({config, type: 'error'});
       });
     }
   });
