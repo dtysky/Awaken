@@ -83,9 +83,19 @@ let host: String = "http://${DEV_URL}"
 
 书库顶部显示本地保存和同步状态，失败后可重试。未下载的书籍可通过卡片上的“下载到本机”单独下载；离线时仍可阅读已下载书籍，修改会保留为待同步状态。
 
+Kindle 笔记导入使用完整引文匹配，支持跨段落、行内样式、排版空白、重叠和乱序标注。预定位 CFI 只有在书籍哈希及选区全文校验通过时才会使用；重复导入保留已有备注。可运行 `node tests/note-search.browser.cjs` 验证定位、备注合并和资源释放（Playwright 环境同上）。
+
 点击书库顶部“同步全部”，可一次同步所有书架的书目、笔记、书签和阅读进度，并将全部 EPUB 下载到本机。处理时显示当前书名与数量进度，已有 EPUB 会跳过；单书下载失败后继续处理其余书籍，完成后列出失败项。点击顶部“重试同步”可再次尝试，已下载的文件会保留。原有“同步”保持书目与本机待上传修改的同步方式，正文仍按需下载。
 
+导入时会跳过完全相同的文件，并集中提示同名同作者的不同 EPUB。默认保留已有记录；确实需要另一个版本时，可在“导入结果”中勾选后单独导入。不同版本的笔记、进度不会自动合并。可运行 `node tests/import.browser.cjs` 验证真实 EPUB 导入和联网书架移动（Playwright 环境同上）。
+
+点击书籍下方“移入书架”，直接选择已有书架即可移动；输入名称可搜索书架，或一步“新建并移入”。当前书架和各书架的书籍数量会显示在列表中。移动后可点“查看书架”跳转，离线修改仍会保存到本机。可选的界面回归测试：先运行 `npm run build`，再用与阅读器测试相同的 Playwright 环境运行 `node tests/shelves.browser.cjs`。
+
 WebDAV 地址支持服务根目录（如 `https://dav.jianguoyun.com/dav/`）或直接指向书库（如 `https://dav.jianguoyun.com/dav/Awaken/`），程序会自动识别已有 `books.json`。同步成功后显示书目数量；书目和封面会拉到本机，EPUB 正文按需下载。
+
+含半角冒号等受限字符的书名，上传时会在书籍哈希目录内使用 `book.epub`，原书名和本机文件不变。索引中的 `remoteFile` 记录实际远端文件名，其他设备需更新到 1.0.6 或之后的版本才能下载这类新上传的书籍；已有书库仍兼容原来的文件名。
+
+桌面端会保存最近 500 条 WebDAV 请求日志，包括时间、方法、路径、HTTP 状态码、耗时及服务器错误详情。macOS 路径为 `~/Library/Logs/com.dtysky.Awaken/webdav.log`，可在 Finder 的“前往文件夹”中打开。日志不记录认证头、请求正文或 URL 查询参数；分享时可自行遮盖书名和服务器地址。书库内的 `sync-state.json` 仍保存最后一次同步状态。
 
 测试很简单，如果实在桌面端，需要你一开始选择一个空目录作为本地书籍存储，可以选择**test/client**目录，接着在主界面的**设定**中，填入以下配置：
 
@@ -139,5 +149,5 @@ npm run release
 
 ## Copyright
 
-**Copyright © 2022, 戴天宇, Tianyu Dai (dtysky < dtysky@outlook.com >). All Rights Reserved.**  
+**Copyright © 2022, 戴天宇, Tianyu Dai (dtysky < dtysky@outlook.com >). All Rights Reserved.**
 **This project is free software and released under the** [GNU Lesser General Public License (LGPL)](https://www.gnu.org/licenses/lgpl-3.0.en.html).
