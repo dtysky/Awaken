@@ -40,7 +40,7 @@
   position: absolute;
   width: 90%;
   left: 5%;
-  top: 4rem;
+  top: 8rem;
   bottom: 0;
   align-content: flex-start;
   padding-bottom: 2rem;
@@ -57,7 +57,7 @@
   max-width: 15rem;
   max-height: 20rem;
   margin-top: 1rem;
-  margin-bottom: 4rem;
+  margin-bottom: 6rem;
   margin-right: 4vw;
   cursor: pointer;
   background-size: cover;
@@ -177,3 +177,79 @@
   button:disabled { cursor: wait; opacity: 0.6; }
 }
 .downloadError { color: #a32b2b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.bookShelfAction { width: 100%; padding-top: 0.15rem; }
+.shelfBar {
+  position: absolute; top: 4.7rem; left: 5%; width: 90%; color: #3b4b42;
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.shelfHeading {
+  display: flex; align-items: baseline; gap: 0.6rem;
+  strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.05rem; }
+  > span { flex: none; color: #78837d; font-size: 0.8rem; }
+}
+.shelfFeedback {
+  display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: #286b4a;
+  > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  button { flex: none; border: 0; border-bottom: 1px solid currentColor; background: none; color: inherit; cursor: pointer; padding: 0; }
+}
+.shelfOverlay {
+  position: fixed; inset: 0; z-index: 12000; background: rgba(26, 38, 31, 0.4);
+  display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+}
+.shelfPicker {
+  width: 440px; max-width: 100%; max-height: calc(100vh - 32px); box-sizing: border-box;
+  display: flex; flex-direction: column; background: #fff; border-radius: 12px;
+  padding: 22px; color: #34483b; box-shadow: 0 18px 64px rgba(0, 0, 0, 0.2);
+  font-size: 15px; line-height: 1.5; overflow: auto; overscroll-behavior: contain;
+  button, input { font: inherit; box-sizing: border-box; }
+  button { cursor: pointer; }
+  button:disabled { cursor: default; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #39865c; outline-offset: 3px; }
+}
+.shelfPickerHeader {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  h2 { margin: 0; font-size: 21px; font-weight: 600; }
+  button { width: 32px; height: 32px; border: none; background: #f3f6f4; border-radius: 50%; color: #65736a; font-size: 24px; line-height: 1; }
+}
+.shelfBookTitle { margin: 12px 0 4px; overflow-wrap: anywhere; font-weight: 500; }
+.shelfHint { color: #78837d; font-size: 13px; margin: 0 0 8px; overflow-wrap: anywhere; }
+.shelfSearch {
+  margin: 16px 0 12px; flex: none;
+  label { display: block; font-size: 13px; margin-bottom: 6px; }
+  input {
+    display: block; width: 100%; padding: 10px 12px; border: 1px solid #cbd8ce;
+    border-radius: 6px; background: #fff; color: #34483b; appearance: none;
+    user-select: text; -webkit-user-select: text;
+  }
+}
+.shelfCreate {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  margin-top: 10px; padding: 10px 12px; border: 1px solid #9dc5ac; border-radius: 6px;
+  background: #edf7f0; color: #236540; overflow-wrap: anywhere;
+  > span:first-child { flex: none; font-size: 21px; }
+  > span:last-child { min-width: 0; }
+  &:hover:not(:disabled) { background: #dff0e5; }
+  &:disabled { opacity: 0.6; }
+}
+.shelfOptions { overflow-y: auto; min-height: 46px; max-height: 270px; flex: 1 1 auto; overscroll-behavior: contain; padding: 3px; margin: -3px; }
+.shelfOption {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 12px; margin-bottom: 5px; border: 1px solid #e4eae6; border-radius: 6px; background: #fff; color: #34483b;
+  > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  small { flex: none; color: #839087; font-size: 12px; }
+  &:hover:not(:disabled) { background: #f1f8f3; border-color: #9dc5ac; }
+  &:disabled { color: #839087; background: #f6f8f6; }
+}
+.shelfOptionCurrent { border-style: dashed; }
+.shelfMoveError { color: #a32b2b; font-size: 13px; margin: 10px 0 0; overflow-wrap: anywhere; }
+.shelfPickerFooter {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  border-top: 1px solid #e6ece8; margin-top: 16px; padding-top: 14px; flex: none;
+  span { font-size: 12px; color: #839087; }
+  button { padding: 5px 12px; background: #fff; color: #65736a; border: 1px solid #d6dfd9; border-radius: 5px; }
+}
+@media (max-width: 480px) {
+  .shelfPicker { padding: 18px; }
+  .shelfOption { gap: 6px; }
+}

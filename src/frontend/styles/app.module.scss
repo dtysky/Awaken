@@ -40,3 +40,16 @@
 }
 .syncDetail { color: #66736c; margin-top: 0.2rem; }
 .syncError { color: #a32b2b; }
+.importReport { font-size: 0.9rem; line-height: 1.6; color: #46534b; overflow-wrap: anywhere; > p { margin-bottom: 0.7rem; } }
+.importDuplicate {
+  display: flex; gap: 0.7rem; padding: 0.9rem 0; border-top: 1px solid #e1e8e3; cursor: pointer;
+  > input { flex: none; width: 17px; height: 17px; margin-top: 0.25rem; accent-color: #39865c; }
+  > span { min-width: 0; }
+  strong, small { display: block; }
+  small { color: #78837d; }
+}
+.importActions {
+  display: flex; gap: 0.5rem;
+  button { padding: 0.45rem 0.7rem; color: #286b4a; border: 1px solid #9dc5ac; background: #fff; border-radius: 4px; cursor: pointer; }
+}
+.importFailures { color: #a32b2b; }

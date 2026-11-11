@@ -5,7 +5,7 @@ import Reader from './reader/Reader';
 import {IBook, IBookConfig} from '../interfaces/protocols';
 import Books from './books/Books';
 import {loadSettings, saveSettings, loadBooks, selectFolder, selectNote} from './utils';
-import webdav from './webdav';
+import webdav, {IBookImportDuplicate} from './webdav';
 import {ISystemSettings} from '../interfaces';
 import SyncStatus from './SyncStatus';
 import css from './styles/app.module.scss';
@@ -22,6 +22,10 @@ export default function App() {
   const [bookshelfList, setBookshelfList] = React.useState<string[]>([]);
   const [downloaded, setDownloaded] = React.useState<{[hash: string]: boolean}>({});
   const [syncRequest, setSyncRequest] = React.useState(0);
+  const [importReport, setImportReport] = React.useState<{
+    imported: number; skipped: number; duplicates: IBookImportDuplicate[]; failures: string[];
+  }>();
+  const [importEditions, setImportEditions] = React.useState<string[]>([]);
   const busy = React.useRef(false);
   const retryAll = React.useRef(false);
   const currentBook = books.find(book => book.hash === current);
@@ -95,6 +99,24 @@ export default function App() {
     setDownloaded(previous => ({...previous, [book.hash]: true}));
   }
 
+  async function importBooks(files: string[], allowAnotherEdition = false) {
+    await run('导入书籍…', async () => {
+      const report = {imported: 0, skipped: 0, duplicates: [] as IBookImportDuplicate[], failures: [] as string[]};
+      for (const file of new Set(files)) {
+        try { await webdav.addBook(file, books, allowAnotherEdition); report.imported++; }
+        catch (error) {
+          const duplicate = error.duplicateBook as IBookImportDuplicate;
+          if (duplicate?.identical) { report.skipped++; }
+          else if (duplicate) { report.duplicates.push(duplicate); }
+          else { report.failures.push(error.message || String(error)); }
+        }
+      }
+      setImportEditions([]);
+      setImportReport(report.skipped || report.duplicates.length || report.failures.length ? report : undefined);
+      if (report.imported) { await saveAndSync(books); }
+    });
+  }
+
   async function closeReader(config?: IBookConfig) {
     await run('保存阅读进度…', async () => {
       if (config) {
@@ -126,26 +148,26 @@ export default function App() {
         })}
         onSync={() => run('同步中…', () => sync())}
         onSyncAll={() => run('同步全部书籍…', () => sync(books, settings, true))}
-        onAddBooks={files => run('导入书籍…', async () => {
-          const failures: string[] = [];
-          for (const file of files) {
-            try { await webdav.addBook(file, books); }
-            catch (error) { failures.push(error.message || String(error)); }
-          }
-          await refresh(books);
-          if (failures.length) { await bk.worker.showMessage(failures.join('\n'), 'error'); }
-          await saveAndSync(books);
-        })}
+        onAddBooks={files => importBooks(files)}
         onRemoveBook={book => run('删除书籍…', async () => {
           await webdav.removeBook(book, books);
           await saveAndSync(books);
         })}
-        onMoveBook={(book, shelf) => run('保存书架…', async () => {
-          const next = books.map(item => item.hash === book.hash ?
-            {...item, bookshelf: {value: shelf, ts: Date.now()}} : item);
-          await webdav.saveBooks(next);
-          await saveAndSync(next);
-        })}
+        onMoveBook={async (book, shelf) => {
+          if (busy.current) { throw new Error('正在处理其他操作，请稍后重试。'); }
+          busy.current = true;
+          try {
+            const next = books.map(item => item.hash === book.hash ?
+              {...item, bookshelf: {value: shelf, ts: Math.max(Date.now(), (item.bookshelf?.ts || 0) + 1)}} : item);
+            // Keep the picker open on local write failure. A remote failure does
+            // not undo a saved move; the sync status retains its retry action.
+            await webdav.saveBooks(next);
+            await refresh(next);
+            if (webdav.connected) {
+              try { await sync(next); } catch (_) { /* Saved locally; retry via sync status. */ }
+            }
+          } finally { busy.current = false; setLoadingInfo(''); }
+        }}
         onImportBookNotes={book => run('导入笔记…', async () => {
           const file = (await selectNote())[0];
           if (!file) { return; }
@@ -178,6 +200,41 @@ export default function App() {
       confirm={() => { setShowConnect(false); run('连接服务器…', () => sync()); }}
       cancel={() => setShowConnect(false)}>
       <p>{settings?.webDav.url}</p><p>取消后仍可阅读已下载的书籍，修改会保存到本机。</p>
+    </Modal>
+    <Modal show={!!importReport} title='导入结果' closeOnClickBg={false}
+      contentStyle={{maxHeight: '55vh'}}
+      actions={<div className={css.importActions}>
+        <button type='button' onClick={() => {setImportReport(undefined); setImportEditions([]);}}>
+          {importReport?.duplicates.length ? '跳过重复项' : '关闭'}
+        </button>
+        {!!importEditions.length && <button type='button' onClick={() => {
+          const files = [...importEditions];
+          setImportReport(undefined); setImportEditions([]);
+          void importBooks(files, true);
+        }}>导入选中的 {importEditions.length} 本</button>}
+      </div>}>
+      {importReport && <div className={css.importReport}>
+        <p>已导入 {importReport.imported} 本，跳过 {importReport.skipped} 本完全相同的文件。</p>
+        {!!importReport.duplicates.length && <>
+          <p>以下 {importReport.duplicates.length} 本与书库中的书名、作者相同，暂未导入。已有书籍、笔记和进度会保留。</p>
+          <p>如果确实是需要保留的另一版本，可勾选后单独导入。</p>
+          {importReport.duplicates.map(duplicate => <label key={duplicate.file} className={css.importDuplicate}>
+            <input type='checkbox' checked={importEditions.includes(duplicate.file)} onChange={event => {
+              const checked = event.target.checked;
+              setImportEditions(previous => checked ? [...previous, duplicate.file] : previous.filter(file => file !== duplicate.file));
+            }} />
+            <span><strong>《{duplicate.name}》</strong>
+              <small>{duplicate.author || '作者未填写'}</small>
+              <small>已有 {duplicate.matches.length} 个版本 · {Array.from(new Set(duplicate.matches.map(book => book.bookshelf?.value || '默认书架'))).join('、')}</small>
+              <small title={duplicate.file}>导入文件：{duplicate.file.split(/[\\/]/).pop()}</small>
+              <span>仍作为另一版本导入</span>
+            </span>
+          </label>)}
+        </>}
+        {!!importReport.failures.length && <div className={css.importFailures}>
+          <p>以下文件未能导入：</p>{importReport.failures.map((failure, index) => <p key={index}>{failure}</p>)}
+        </div>}
+      </div>}
     </Modal>
   </div>;
 }

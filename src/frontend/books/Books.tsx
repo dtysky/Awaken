@@ -6,11 +6,12 @@
  */
 import * as React from 'react';
 import ColorHash from 'color-hash'
-import { IconButton, Modal, Select, Option } from 'hana-ui';
+import { IconButton, Modal } from 'hana-ui';
 
 import bk from '../../backend';
 import { IBook } from '../../interfaces/protocols';
 import { Menu } from './Menu';
+import ShelfPicker from './ShelfPicker';
 import { ISystemSettings } from '../../interfaces';
 
 import css from '../styles/books.module.scss';
@@ -22,7 +23,7 @@ export interface IBooksProps {
   books: [IBook[], React.Dispatch<React.SetStateAction<IBook[]>>];
   downloaded: {[hash: string]: boolean};
   onDownload(book: IBook): Promise<void>;
-  onMoveBook(book: IBook, shelf: string | null): void;
+  onMoveBook(book: IBook, shelf: string | null): Promise<void>;
   onSelect(index: number): void;
   onUpdateSettings(config: ISystemSettings): void;
   onAddBooks(files: string[]): void;
@@ -35,9 +36,8 @@ export interface IBooksProps {
 export default function Books(props: IBooksProps) {
   const [showDelete, setShowDelete] = React.useState<boolean>(false);
   const [bookDelete, setBookDelete] = React.useState<IBook>();
-  const [isOnAddToBookshelf, setIsOnAddToBookshelf] = React.useState<boolean>(false);
-  const [addToBookshelfBook, setAddToBookshelfBook] = React.useState<string>();
   const [bookAddToBookshelf, setBookAddToBookshelf] = React.useState<IBook>();
+  const [movedTo, setMovedTo] = React.useState<{shelf: string | null}>();
   const [selectedBookshelf, setSelectedBookshelf] = React.useState<string>(null);
   const [bookshelfList, setBookshelfList] = props.bookshelfList;
   const [books, setBooks] = props.books;
@@ -46,13 +46,22 @@ export default function Books(props: IBooksProps) {
     <div className={css.books}>
       <Menu
         bookshelfListState={[bookshelfList, setBookshelfList]}
-        selectedBookshelfState={[selectedBookshelf, setSelectedBookshelf]}
+        selectedBookshelfState={[selectedBookshelf, shelf => {setSelectedBookshelf(shelf); setMovedTo(undefined);}]}
         settings={props.settings}
         onUpdateSettings={props.onUpdateSettings}
         onAddBooks={props.onAddBooks}
         onSync={props.onSync}
         onSyncAll={props.onSyncAll}
       />
+      <div className={css.shelfBar}>
+        <div className={css.shelfHeading}><strong>{selectedBookshelf || '默认书架'}</strong>
+          <span>{books.filter(book => !book.removed && (book.bookshelf?.value || null) === selectedBookshelf).length} 本</span>
+        </div>
+        {movedTo && <div className={css.shelfFeedback} role='status'>
+          <span>已移入“{movedTo.shelf || '默认书架'}”</span>
+          <button type='button' onClick={() => {setSelectedBookshelf(movedTo.shelf); setMovedTo(undefined);}}>查看书架</button>
+        </div>}
+      </div>
       <div className={css.list}>
         {books.map((book, index) => !book.removed && (book.bookshelf?.value == selectedBookshelf) && (
           <Book
@@ -71,7 +80,6 @@ export default function Books(props: IBooksProps) {
               props.onImportBookNotes(book)
             }}
             onAddToBookshelf={() => {
-              setIsOnAddToBookshelf(true);
               setBookAddToBookshelf(book);
             }}
           />
@@ -94,42 +102,13 @@ export default function Books(props: IBooksProps) {
         <p>但笔记将会保留，再次添加相同书籍可恢复。</p>
       </Modal>
 
-      {/* 添加到书架 */}
-      <Modal
-        show={isOnAddToBookshelf}
-        title='添加到书架'
-        confirm={() => {
-          if (!bookAddToBookshelf || !addToBookshelfBook) { return; }
-          props.onMoveBook(bookAddToBookshelf, addToBookshelfBook === '默认书架' ? null : addToBookshelfBook);
-          setIsOnAddToBookshelf(false);
-          setAddToBookshelfBook(undefined);
-          setBookAddToBookshelf(undefined);
-        }}
-        cancel={() => setIsOnAddToBookshelf(false)}
-      >
-        <p>书籍《{bookAddToBookshelf?.name}》将会被移动到书架。</p>
-        <br />
-        <Select
-          defaultLabel='选择书架'
-          auto
-          onSelect={(value) => {
-            setAddToBookshelfBook(value);
-          }}
-        >
-          <Option
-            key='none'
-            label='默认书架'
-            value={'默认书架'}
-          />
-          {bookshelfList.map(bs => (
-            <Option
-              key={bs}
-              label={bs}
-              value={bs}
-            />
-          ))}
-        </Select>
-      </Modal>
+      {bookAddToBookshelf && <ShelfPicker book={bookAddToBookshelf} books={books} shelves={bookshelfList}
+        onClose={() => setBookAddToBookshelf(undefined)}
+        onMove={async shelf => {
+          await props.onMoveBook(bookAddToBookshelf, shelf);
+          if (shelf) { setBookshelfList(previous => Array.from(new Set([...previous, shelf]))); }
+          setMovedTo({shelf});
+        }} />}
     </div>
   );
 }
@@ -182,15 +161,15 @@ function Book(props: IBookProps) {
           finally { setDownloading(false); }
         }}>{downloading ? '下载中…' : error ? '重试下载' : '下载到本机'}</button>}
         {error && <span className={css.downloadError} title={error}>{error}</span>}
+        <div className={css.bookShelfAction}><button type='button' onClick={event => {
+          event.currentTarget.focus();
+          props.onAddToBookshelf();
+        }}
+          aria-label={`将《${props.book.name}》移入书架`}>移入书架</button></div>
       </div>
       {
         bk.supportAddDeleteBook && (
           <div className={css.bookActions}>
-            <IconButton
-              type='menu'
-              size='large'
-              onClick={props.onAddToBookshelf}
-            />
             <IconButton
               type='offline'
               size='large'

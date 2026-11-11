@@ -247,19 +247,20 @@ export function Menu(props: IMenuProps) {
       >
         <button
           className={`${css.bookshelfButton} ${selectedBookshelf ? '' : css.bookshelfButtonActive}`}
-          onClick={() => setSelectedBookshelf(null)}
+          onClick={() => {setSelectedBookshelf(null); setShowBookshelf(false);}}
         >默认书架</button>
         {bookshelfList.map(bookshelfName => (
           <button
             className={`${css.bookshelfButton} ${selectedBookshelf === bookshelfName ? css.bookshelfButtonActive : ''}`}
             key={bookshelfName}
-            onClick={() => setSelectedBookshelf(bookshelfName)}
+            onClick={() => {setSelectedBookshelf(bookshelfName); setShowBookshelf(false);}}
           >{bookshelfName}</button>
         ))}
         <button
           className={css.bookshelfButton}
           style={{ borderBottom: 'none' }}
           onClick={() => {
+            setShowBookshelf(false);
             setShowAddBookshelf(true);
           }}
         >
@@ -270,12 +271,13 @@ export function Menu(props: IMenuProps) {
       <Modal
         show={showAddBookshelf}
         confirm={() => {
-          if (newBookshelfName.trim().length) {
-            if (bookshelfList.indexOf(newBookshelfName) >= 0 || newBookshelfName === '默认书架') {
+          const name = newBookshelfName.trim();
+          if (name.length) {
+            if (bookshelfList.indexOf(name) >= 0 || name === '默认书架') {
               alert('书架已存在！');
               return;
             }
-            setBookshelfList([...bookshelfList, newBookshelfName]);
+            setBookshelfList([...bookshelfList, name]);
             setNewBookshelfName('');
             setShowAddBookshelf(false);
           }
