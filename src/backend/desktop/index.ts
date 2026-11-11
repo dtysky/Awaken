@@ -9,7 +9,8 @@ import {proxy} from 'ajax-hook';
 
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {defaultThemes, ISystemSettings} from '../../interfaces';
-import {DAV_PREFIX} from '../common';
+import {DAV_PREFIX, webdavLogUrl, webdavStatusText} from '../common';
+import {logWebDAV} from './log';
 import {IBook} from '../../interfaces/protocols';
 
 let BOOKS_FOLDER: string;
@@ -213,21 +214,29 @@ if (!window['Awaken']) {
       // PROPFIND returns XML even for .png/.epub paths. Use the requested
       // response type instead of guessing it from the file extension.
       const binary = config.method.toUpperCase() === 'GET' && config.xhr.responseType === 'arraybuffer';
+      const started = Date.now();
+      const request = {method: config.method.toUpperCase(), url: webdavLogUrl(url)};
+      const upload = config.method.toUpperCase() === 'PUT' && config.body && typeof config.body !== 'string';
 
       http.fetch(url, {
-        timeout: binary ? 120 : 15,
+        timeout: binary || upload ? 120 : 15,
         method: config.method as any,
         body: config.body ? (typeof config.body === 'string' ? http.Body.text(config.body) : http.Body.bytes(config.body)) : undefined,
         headers: config.headers,
         responseType: binary ? http.ResponseType.Binary : http.ResponseType.Text
-      }).then(res => {
+      }).then(async res => {
+        const statusText = webdavStatusText(res.status, res.data);
+        await logWebDAV({...request, status: res.status, durationMs: Date.now() - started,
+          ...(res.status >= 400 ? {error: statusText} : {})});
         handler.resolve({
           config: config,
           status: res.status,
+          statusText,
           headers: res.headers,
           response: binary ? Uint8Array.from(res.data as number[]).buffer : res.data
         });
-      }).catch(() => {
+      }).catch(async () => {
+        await logWebDAV({...request, status: 0, durationMs: Date.now() - started, error: '网络请求失败或超时。'});
         handler.reject({config, type: 'error'});
       });
     }

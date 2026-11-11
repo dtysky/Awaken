@@ -2,7 +2,32 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {load, clone, hash, book, note, config, fixture} = require('./helpers.cjs');
 const common = load('src/frontend/reader/common.ts');
-const {mergeBooks, mergeConfig, validateBooks} = load('src/frontend/sync.ts');
+const {mergeBooks, mergeConfig, mergeImportedNotes, validateBooks} = load('src/frontend/sync.ts');
+
+test('reimporting highlights preserves personal comments and leaves identical notes unchanged', () => {
+  const original = note(10, {text: 'Quote', annotation: 'Personal comment', modified: 50});
+  const unrelated = note(20, {annotation: 'Other comment'});
+  const result = mergeImportedNotes([original, unrelated], [note(10, {annotation: '', modified: 80})], {});
+  assert.deepEqual(clone(result), [original, unrelated]);
+});
+
+test('imported comments are combined once and tombstones still protect unrelated deleted notes', () => {
+  const original = note(10, {annotation: 'Personal comment', modified: 100});
+  const incoming = note(10, {annotation: 'Kindle comment', modified: 80});
+  const removed = {[note(20).cfi]: 50};
+  const result = mergeImportedNotes([original, note(20)], [incoming, note(30)], removed);
+  assert.equal(result.length, 2);
+  assert.equal(result[0].annotation, 'Personal comment\n\nKindle comment');
+  assert.equal(result[0].modified, 101);
+  assert.deepEqual(clone(mergeImportedNotes(result, [incoming], removed)), clone(result));
+});
+
+test('duplicate highlights in one export keep each distinct comment', () => {
+  const incoming = [note(10, {annotation: 'First'}), note(10, {annotation: 'Second'}), note(10, {annotation: 'First'})];
+  const result = mergeImportedNotes([], incoming, {});
+  assert.equal(result.length, 1);
+  assert.equal(result[0].annotation, 'First\n\nSecond');
+});
 
 test('inserting a highlight between existing notes preserves both neighbors', () => {
   const notes = [note(10), note(30)];
@@ -134,10 +159,11 @@ test('corrupt local indexes are reported without overwriting the original file',
   assert.equal(f.files.get('books.json'), '{broken');
 });
 test('Kindle highlights of six or fewer characters use their own length', async () => {
-  const leaf = {textContent: '你好世界', childNodes: []};
-  let end;
-  const section = {async load() {}, document: {querySelector: () => leaf,
-    createRange: () => ({setStart() {}, setEnd(node, offset) {end = offset;}})}, cfiFromRange: () => 'found'};
+  const leaf = {nodeType: 3, textContent: '你好世界', childNodes: []};
+  let start, end;
+  const section = {async load() {}, document: {body: leaf,
+    createRange: () => ({setStart(node, offset) {start = offset;}, setEnd(node, offset) {end = offset;},
+      toString: () => leaf.textContent.slice(start, end)})}, cfiFromRange: () => 'found'};
   const utils = load('src/frontend/utils.tsx', {'../backend': {default: {}}});
   const result = await utils.searchFirstInBook('你好', {spine: {spineItems: [section]}, load() {}}, 0);
   assert.equal(result.cfi, 'found'); assert.equal(end, 2);

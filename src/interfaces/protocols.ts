@@ -10,6 +10,8 @@ export interface IBook {
   hash: string;
   type: TBookType;
   name: string;
+  // Optional remote EPUB filename; display title and local path stay unchanged.
+  remoteFile?: string;
   author: string;
   ts: number;
   removed?: boolean;

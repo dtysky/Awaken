@@ -13,7 +13,21 @@ import {IBook, IBookConfig, IBookNote} from '../interfaces/protocols';
 import {fillBookCover, searchFirstInBook} from './utils';
 import {ISystemSettings} from '../interfaces';
 import {splitCFI} from './reader/common';
-import {ISyncState, mergeBooks, mergeConfig, mergeNotes, serializeBooks, validateBooks} from './sync';
+import {ISyncState, findMatchingBooks, mergeBooks, mergeConfig, mergeImportedNotes, safeRemoteEpubFile, serializeBooks, validateBooks} from './sync';
+
+export interface IBookImportDuplicate {
+  file: string;
+  name: string;
+  author: string;
+  matches: IBook[];
+  identical: boolean;
+}
+
+class DuplicateBookError extends Error {
+  constructor(public duplicateBook: IBookImportDuplicate) {
+    super(`书库中已有《${duplicateBook.name}》，已跳过重复导入。`);
+  }
+}
 
 export interface IBookContent {
   content: ArrayBuffer;
@@ -90,6 +104,10 @@ export class WebDAV {
 
   private _remotePath(path: string) {
     return this._remoteFolder ? `${this._remoteFolder}/${path}` : path;
+  }
+
+  private _remoteEpubPath(book: IBook) {
+    return this._remotePath(`${book.hash}/${book.remoteFile || `${book.name}.epub`}`);
   }
 
   private async _findLibrary(client: WebDAVClient, url: string): Promise<string> {
@@ -246,8 +264,8 @@ export class WebDAV {
         const epubPath = `${book.hash}/${book.name}.epub`;
         if (book.removed) {
           if (await bk.worker.fs.exists(epubPath, 'Books')) { await bk.worker.fs.removeFile(epubPath, 'Books'); }
-          if (!remoteBook?.removed && await this._client.exists(this._remotePath(epubPath))) {
-            await this._client.deleteFile(this._remotePath(epubPath));
+          if (remoteBook && !remoteBook.removed && await this._client.exists(this._remoteEpubPath(remoteBook))) {
+            await this._client.deleteFile(this._remoteEpubPath(remoteBook));
           }
           continue;
         }
@@ -259,7 +277,12 @@ export class WebDAV {
             if (filename === 'config.json' && await this._client.exists(this._remotePath(path))) { continue; }
             if (await bk.worker.fs.exists(path, 'Books')) {
               onUpdate(`上传《${book.name}》的 ${filename}...`);
-              await this._client.putFileContents(this._remotePath(path), await bk.worker.fs.readFile(path, 'binary', 'Books'), {overwrite: true});
+              if (filename === `${book.name}.epub` && !book.remoteFile) {
+                const safeName = safeRemoteEpubFile(book.name);
+                if (safeName !== filename) { book.remoteFile = safeName; }
+              }
+              const destination = filename === `${book.name}.epub` ? this._remoteEpubPath(book) : this._remotePath(path);
+              await this._client.putFileContents(destination, await bk.worker.fs.readFile(path, 'binary', 'Books'), {overwrite: true});
             }
           }
         }
@@ -302,7 +325,8 @@ export class WebDAV {
     const path = `${book.hash}/${filename}`;
     if (await bk.worker.fs.exists(path, 'Books')) { return undefined; }
     if (!this.connected) { throw new Error('书籍未下载，请连接服务器后下载。'); }
-    const data = await this._client.getFileContents(this._remotePath(path), {
+    const source = filename === `${book.name}.epub` ? this._remoteEpubPath(book) : this._remotePath(path);
+    const data = await this._client.getFileContents(source, {
       format: /json$/.test(filename) ? 'text' : 'binary',
       onDownloadProgress: ({loaded, total}) => onUpdate?.(`下载《${book.name}》${total ? ` ${Math.floor(loaded / total * 100)}%` : '...'}`)
     });
@@ -378,8 +402,6 @@ export class WebDAV {
     return merged.filter(book => !book.removed).map(book => book.bookshelf?.value || null);
   }
 
-  private _mergeNotes = mergeNotes;
-
   public async saveConfig(book: IBook, config: IBookConfig) {
     await this._write(`${book.hash}/config.json`, JSON.stringify(config));
     await this._pending(book.hash);
@@ -392,34 +414,36 @@ export class WebDAV {
     await this.saveBooks(books, false);
   }
 
-  public async addBook(fp: string, books: IBook[]): Promise<IBook[]> {
+  public async addBook(fp: string, books: IBook[], allowAnotherEdition = false): Promise<IBook[]> {
     const {fs} = bk.worker;
     const epub = ePub();
 
     try {
       const content = await fs.readFile(fp, 'binary', 'None') as ArrayBuffer;
+      const hash = md5.hex(content);
+      const book = books.find(b => b.hash === hash);
+      if (book && !book.removed) {
+        throw new DuplicateBookError({file: fp, name: book.name, author: book.author, matches: [book], identical: true});
+      }
       try {
         await epub.open(content);
       } catch (error) {
         throw new Error(`书籍无法解析：${fp}`);
       }
 
-      const hash = md5.hex(content);
-      
-      const book = books.filter(b => b.hash === hash)[0];
-      if (book && !book?.removed) {
-        throw new Error(`书籍已存在：${fp}`);
+      const metadata = await epub.loaded.metadata;
+      const name = metadata.title;
+      if (!name || /[\\/\u0000]/.test(name)) { throw new Error('书名为空或包含不支持的路径字符。'); }
+      const author = metadata.creator;
+      const matches = findMatchingBooks(books, {name, author});
+      if (matches.length && !allowAnotherEdition) {
+        throw new DuplicateBookError({file: fp, name, author, matches, identical: false});
       }
-
       const coverUrl = await epub.coverUrl();
       let cover: ArrayBuffer;
       if (coverUrl) {
         cover = await (await fetch(coverUrl)).arrayBuffer();
       }
-      const metadata = await epub.loaded.metadata;
-      const name = metadata.title;
-      if (!name || /[\\/\u0000]/.test(name)) { throw new Error('书名为空或包含不支持的路径字符。'); }
-      const author = metadata.creator;
 
       if (!book) {
         !(await fs.exists(hash, 'Books')) && await fs.createDir(hash, 'Books');
@@ -444,7 +468,11 @@ export class WebDAV {
     } catch (error) {
       throw error;
     } finally {
-      epub.destroy();
+      // open() resolves before navigation parsing finishes. In particular, an
+      // early duplicate return must not destroy the parser while that callback
+      // still needs its loading state. Cleanup does not hold up the next file.
+      if (epub.isOpen) { void epub.ready.then(() => epub.destroy(), () => epub.destroy()); }
+      else { epub.destroy(); }
     }
 
     await this.saveBooks(books);
@@ -493,93 +521,99 @@ export class WebDAV {
     }
 
     const epub = ePub();
-    await epub.open(content);
-
-    let pages: string;
-    if (await fs.exists(`${book.hash}/pages.json`, 'Books')) {
-      pages = await fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string;
-      epub.locations.load(pages);
-    } else {
-      onUpdate('首次生成书籍分页中...');
-      const ps = await epub.locations.generate(600);
-      pages = JSON.stringify(ps);
-      await this.savePages(book, ps);
-    }
-
-    const metaInfos = dom.querySelectorAll('h3.noteHeading');
-    const metaNotes = [...dom.querySelectorAll('div.noteText')].map(note => note.childNodes[0]);
-    const notes: IBookNote[] = [];
-
-    onUpdate(`检测到 ${metaInfos.length} 条标注或笔记，准备分析...`);
-
-    const failed: string[] = [];
-    let i: number = 0;
-    let section: number = 0;
-    let firstNode: Node;
-    while (i < metaInfos.length) {
-      const info = metaInfos[i].textContent;
-      let text = metaNotes[i].textContent;
-      let annotation: string = '';
-
-      const nextInfo = metaInfos[i + 1]?.textContent;
-      if (nextInfo?.startsWith('备注')) {
-        annotation = metaNotes[i + 1].textContent;
-      }
-
-      if (nextInfo) {
-        text = text.replace(nextInfo, '').trim();
-        const nn = metaInfos[i + 2]?.textContent;
-
-        if (annotation && nn) {
-          annotation = annotation.replace(nn, '');
-        }
-      }
-
-      text = text.replace(/\s+/g, '');
-
-      const res = await searchFirstInBook(text, epub, section, firstNode);
-      section = res.section;
-      firstNode = res.endNode;
-      if (res.cfi) {
-        const cfi = res.cfi;
-        const [start, end] = splitCFI(cfi);
-
-        notes.push({
-          cfi, start, end,
-          page: epub.locations.locationFromCfi(cfi) as unknown as number,
-          text, annotation,
-          modified: Date.now()
-        });
-      } else {
-        failed.push(`${info}标注：${text}${annotation ? '笔记：' + annotation : ''}\n`);
-      }
-
-      i += annotation ? 2 : 1;
-      onUpdate(`分析进度 ${i} / ${metaInfos.length} 条...`);
-    }
-
-    onUpdate(`分析完成，准备和已存在的笔记合并...`);
-
-    const fp = `${book.hash}/config.json`;
-    const config = JSON.parse(await fs.readFile(fp, 'utf8', 'Books') as string) as IBookConfig;
-    config.notes = this._mergeNotes(config.notes, notes, {});
-    const configStr = JSON.stringify(config);
-    await this.saveConfig(book, config);
-
-    if (!this._client) {
-      showMessage('服务器未连接，暂不同步到远端...', 'warning');
-      return failed;
-    }
-
     try {
-      onUpdate(`合并完成，同步到远端...`);
-      await this.syncBook(book, config);
-    } catch (error) {
-      showMessage('同步到远端失败，请手动重试...', 'error');
-    }
+      await epub.open(content);
+      await epub.ready;
 
-    epub.destroy();
-    return failed;
+      let pages: string;
+      if (await fs.exists(`${book.hash}/pages.json`, 'Books')) {
+        pages = await fs.readFile(`${book.hash}/pages.json`, 'utf8', 'Books') as string;
+        epub.locations.load(pages);
+      } else {
+        onUpdate('首次生成书籍分页中...');
+        const ps = await epub.locations.generate(600);
+        pages = JSON.stringify(ps);
+        await this.savePages(book, ps);
+      }
+
+      const metaInfos = dom.querySelectorAll('h3.noteHeading');
+      const metaNotes = [...dom.querySelectorAll('div.noteText')].map(note => note.childNodes[0]);
+      const notes: IBookNote[] = [];
+
+      onUpdate(`检测到 ${metaInfos.length} 条标注或笔记，准备分析...`);
+
+      const failed: string[] = [];
+      let i: number = 0;
+      let section: number = 0;
+      let firstNode: Node;
+      const preparedHash = dom.querySelector('div.bookTitle')?.getAttribute('data-awaken-book-md5');
+      while (i < metaInfos.length) {
+        const info = metaInfos[i].textContent;
+        let text = metaNotes[i].textContent;
+        let annotation: string = '';
+
+        const nextInfo = metaInfos[i + 1]?.textContent;
+        if (nextInfo?.startsWith('备注')) {
+          annotation = metaNotes[i + 1].textContent;
+        }
+
+        if (nextInfo) {
+          text = text.replace(nextInfo, '').trim();
+          const nn = metaInfos[i + 2]?.textContent;
+
+          if (annotation && nn) {
+            annotation = annotation.replace(nn, '');
+          }
+        }
+
+        text = text.replace(/\s+/g, '');
+
+        const cfiHint = preparedHash === book.hash ? metaInfos[i].getAttribute('data-awaken-cfi') : undefined;
+        const res = await searchFirstInBook(text, epub, section, firstNode, {cfi: cfiHint});
+        section = res.section;
+        firstNode = res.endNode;
+        if (res.cfi) {
+          const cfi = res.cfi;
+          const [start, end] = splitCFI(cfi);
+
+          notes.push({
+            cfi, start, end,
+            page: epub.locations.locationFromCfi(cfi) as unknown as number,
+            text, annotation,
+            modified: Date.now()
+          });
+        } else {
+          failed.push(`${info}标注：${text}${annotation ? '笔记：' + annotation : ''}\n`);
+        }
+
+        i += annotation ? 2 : 1;
+        onUpdate(`分析进度 ${i} / ${metaInfos.length} 条...`);
+      }
+
+      onUpdate(`分析完成，准备和已存在的笔记合并...`);
+
+      const fp = `${book.hash}/config.json`;
+      const config = JSON.parse(await fs.readFile(fp, 'utf8', 'Books') as string) as IBookConfig;
+      config.removedTs = {...config.removedTs};
+      config.notes = mergeImportedNotes(config.notes || [], notes, config.removedTs);
+      await this.saveConfig(book, config);
+
+      if (!this._client) {
+        showMessage('服务器未连接，暂不同步到远端...', 'warning');
+        return failed;
+      }
+
+      try {
+        onUpdate(`合并完成，同步到远端...`);
+        await this.syncBook(book, config);
+      } catch (error) {
+        showMessage('同步到远端失败，请手动重试...', 'error');
+      }
+
+      return failed;
+    } finally {
+      epub.destroy();
+    }
   }
 }
 

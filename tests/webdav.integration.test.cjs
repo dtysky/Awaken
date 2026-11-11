@@ -118,3 +118,49 @@ test('Mac bridge full sync uploads local EPUBs and downloads every remote shelf 
     await fs.rm(root, {recursive: true, force: true});
   }
 });
+
+test('Mac bridge exposes HTTP 400 details and syncs a colon title through a strict WebDAV server', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'awaken-filename-test-'));
+  const library = path.join(root, 'Awaken');
+  await fs.mkdir(library);
+  await fs.writeFile(path.join(library, 'books.json'), '[]');
+  const server = new webdav.WebDAVServer({port: 0, hostname: '127.0.0.1', rootFileSystem: new webdav.PhysicalFileSystem(root)});
+  server.beforeRequest((ctx, next) => {
+    if (!decodeURIComponent(ctx.request.url).includes(':')) return next();
+    ctx.setCode(400);
+    ctx.response.setHeader('Content-Type', 'application/xml');
+    ctx.response.write('<d:error xmlns:d="DAV:" xmlns:s="urn:server"><s:message>the nustore path is not valid</s:message></d:error>');
+    ctx.exit();
+  });
+  let httpServer;
+  try {
+    httpServer = await new Promise(resolve => server.start(resolve));
+    const url = `http://127.0.0.1:${httpServer.address().port}/Awaken`;
+    const bridge = transport(); getPatcher().patch('request', bridge.request);
+    const item = book('a', {name: '于天上看见深渊:新经典主义文学对话录'});
+    const client = createClient(bridge.DAV_PREFIX + url);
+    await assert.rejects(client.exists(`${item.hash}/${item.name}.epub`),
+      /400 Bad Request: the nustore path is not valid/);
+    assert.equal(bridge.logs[0].status, 400);
+    assert.match(bridge.logs[0].error, /path is not valid/);
+    const f = fixture(createClient, bridge.DAV_PREFIX); f.seed(item);
+    await f.dav.changeRemote({url, user: '', password: ''});
+    const books = [item];
+    await f.dav.syncAllBooks(books);
+    const remote = JSON.parse(await fs.readFile(path.join(library, 'books.json'), 'utf8'));
+    assert.equal(remote[0].name, item.name);
+    assert.equal(remote[0].remoteFile, 'book.epub');
+    assert.equal((await fs.readFile(path.join(library, item.hash, 'book.epub'))).length, 8);
+    const second = fixture(createClient, bridge.DAV_PREFIX);
+    await second.dav.changeRemote({url, user: '', password: ''});
+    const downloaded = [];
+    await second.dav.syncAllBooks(downloaded);
+    assert.equal(await second.dav.isDownloaded(downloaded[0]), true);
+    assert.deepEqual(Buffer.from(second.files.get(`${item.hash}/${item.name}.epub`)), Buffer.alloc(8));
+    assert.equal(bridge.logs.filter(entry => entry.status === 400).length, 1);
+  } finally {
+    getPatcher().patch('request', options => require('axios')(options));
+    if (httpServer) await new Promise(resolve => httpServer.close(resolve));
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});

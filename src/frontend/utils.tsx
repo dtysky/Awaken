@@ -77,186 +77,114 @@ export async function selectNote() {
 
 export async function searchFirstInBook(
   text: string, book: ePub.Book,
-  fromSection: number, firstNode: Node
+  fromSection: number = 0, firstNode?: Node,
+  hint?: {cfi?: string}
 ): Promise<{cfi: string, endNode: Node, section?: number}> {
-  const spineItems = (book.spine as any).spineItems as any[];
-  const len = spineItems.length;
-  let i: number;
+  const query = normalizeNoteText(text);
+  const items = (book.spine as any).spineItems as any[];
+  const missing = {cfi: '', section: fromSection, endNode: firstNode};
+  if (!query || !items.length) { return missing; }
 
-  // 本来做了标题匹配的优化，但因为kindle笔记的鬼才设计，没有任何意义
-  for (i = fromSection; i < len; i += 1) {
-    const section = spineItems[i];
-    await section.load(book.load.bind(book));
-    
-    const res = findFromSection(section, text, i === fromSection ? firstNode : undefined);
-    if (res) {
-      res.section = i;
-      return res;
-    }
-  }
-
-  return {cfi: '', section: fromSection, endNode: firstNode};
-}
-
-/**
- * 这是一个无奈的hack...
- * 用`query`的前N个字获取`rangeStart`，后N个字获取`rangeEnd`，最后合并
- * N看实际情况来取，而`textE`需要在`textS`（无link）/`linkE`（有link）的十八个结点之内
- * 
- * 先判断是否有[\d+]的link，没有的话
- *  小于六个字的，直接全文搜索
- *  大于六个字的，拆成前六后六两部分，分别搜索后合并
- * 有的话
- *  先查找到第一个link，然后反向搜索link前的文本的前（小于等于六个字），没有文本则直接以link为起点
- *  然后找到最后一个link，正向搜索link后的文本的最后（小于等于六个字），没有文本则以link为终点
- */
-function findFromSection(
-  section: any, query: string, firstNode: Node
-): {cfi: string, endNode: Node, section?: number} {
-  const texts = query.split(/\[\d+?\]/g);
-  const links = [...query.matchAll(/(\[\d+?\])/g)].map(v => v[1]);
-  let textS: string, textE: string;
-  let linkS: string, linkE: string;
-
-  if (!links.length) {
-    const text = texts[0];
-    if (text.length <= 6) {
-      textS = text;
-    } else {
-      textS = text.slice(0, 6);
-      textE = text.slice(text.length - 6, text.length);
-    }
-  } else {
-    linkS = links[0];
-    linkE = links.pop();
-    textS = texts[0];
-    textE = texts.pop();
-
-    if (query.startsWith(linkS)) {
-      textS = undefined;
-    } else {
-      textS = textS.slice(0, 6);
-    }
-
-    if (query.endsWith(linkE)) {
-      textE = undefined;
-    } else {
-      textE = textE.slice(Math.max(textE.length - 6, 0), textE.length);
-    }
-  }
-
-  const firstP = firstNode || section.document.querySelector('p');
-  if (!firstP) {
-    return undefined;
-  }
-
-  let nodeS: Node, nodeE: Node;
-  let posS: number, posE: number;
-  // pos = text.indexOf(query, last + 1);
-
-  if (!textE && !linkS && !linkE) {
-    nodeS = walkFromNode(firstP, node => {
-      posS = node.textContent.replace('\x20', '').indexOf(textS);
-      return posS >= 0;
-    });
-
-    return nodeS ? getRange(section, nodeS, posS, nodeS, posS + textS.length) : undefined;
-  }
-
-  if (!linkS && !linkE) {
-    nodeS = walkFromNode(firstP, node => {
-      posS = node.textContent.replace('\x20', '').indexOf(textS);
-      return posS >= 0;
-    });
-
-    if (!nodeS) {
-      return undefined;
-    }
-
-    nodeE = walkFromNode(nodeS, node => {
-      posE = node.textContent.replace('\x20', '').indexOf(textE);
-      return posE >= 0;
-    });
-
-    return nodeE ? getRange(section, nodeS, posS, nodeE, posE + textE.length) : undefined;
-  }
-
-  nodeS = walkFromNode(firstP, node => {
-    posS = node.textContent.indexOf(linkS);
-    return posS >= 0;
-  });
-
-  if (!nodeS) {
-    return undefined;
-  }
-
-  nodeE = linkS === linkE ? nodeS : walkFromNode(nodeS, node => {
-    posE = node.textContent.indexOf(linkE);
-    return posE >= 0;
-  });
-
-  if (!nodeE) {
-    return undefined;
-  }
-
-  if (textS) {
-    nodeS = walkFromNode(nodeS, node => {
-      posS = node.textContent.replace('\x20', '').indexOf(textS);
-      return posS >= 0;
-    }, true);
-  }
-
-  if (!nodeS) {
-    return undefined;
-  }
-
-  if (textE) {
-    nodeE = walkFromNode(nodeE, node => {
-      posE = node.textContent.replace('\x20', '').indexOf(textE);
-      return posE >= 0;
-    });
-  }
-
-  return nodeE ? getRange(section, nodeS, posS, nodeE, posE + (textE || linkE).length) : undefined;
-}
-
-function getRange(
-  section: any, nodeS: Node, posS: number, nodeE: Node, posE: number
-): {cfi: string, endNode: Node, section?: number} {
-  const range = (section.document as Document).createRange();
-  range.setStart(nodeS, posS);
-  range.setEnd(nodeE, posE);
-
-  return {cfi: section.cfiFromRange(range), endNode: nodeE};
-}
-
-function walkFromNode(node: Node, cb: (node: Node) => boolean, reverse: boolean = false): Node {
-  if (node.childNodes.length) {
-    if (reverse) {
-      return walkFromNode(node.childNodes[node.childNodes.length - 1], cb, reverse);
-    }
-
-    return walkFromNode(node.childNodes[0], cb, reverse);
-  }
-
-  if (cb(node)) {
-    return node;
-  }
-
-  while (node) {
-    if (reverse) {
-      if (node.previousSibling) {
-        return walkFromNode(node.previousSibling, cb, reverse);
-      }  
-    } else {
-      if (node.nextSibling) {
-        return walkFromNode(node.nextSibling, cb, reverse);
+  // A prepared file can identify one occurrence of a repeated quotation.
+  // Never trust that location without checking its complete selected text.
+  if (hint?.cfi) {
+    try {
+      const range = await book.getRange(hint.cfi);
+      const section = book.spine.get(hint.cfi) as any;
+      if (range && section && normalizeNoteText(range.toString()) === query) {
+        const index = indexNoteText(section.document);
+        const entry = index.nodes.find(item => item.node === range.startContainer);
+        const offset = entry?.offsets.findIndex(value => value >= range.startOffset);
+        const start = entry && offset >= 0 ? entry.start + offset : 0;
+        noteSearchCursor.set(book, {section: section.index, start, endNode: range.endContainer});
+        return {cfi: hint.cfi, section: section.index, endNode: range.endContainer};
       }
-    }
-
-
-    node = node.parentNode;
+    } catch { /* Invalid or stale hints fall back to exact text search. */ }
   }
 
-  return undefined;
+  const begin = Math.max(0, Math.min(fromSection || 0, items.length - 1));
+  const previous = firstNode && noteSearchCursor.get(book);
+  const continued = previous && previous.section === begin && previous.endNode === firstNode;
+  let firstOffset = continued ? previous.start : 0;
+  const find = async (sectionIndex: number, lower: number, upper = Infinity) => {
+    const section = items[sectionIndex];
+    await section.load(book.load.bind(book));
+    const index = indexNoteText(section.document);
+    if (sectionIndex === begin && firstNode && !continued && !lower && upper === Infinity) {
+      const entry = index.nodes.find(item => item.node === firstNode || firstNode.contains?.(item.node));
+      firstOffset = entry?.start || 0;
+      lower = firstOffset;
+    }
+    const start = index.text.indexOf(query, lower);
+    if (start < 0 || start >= upper) { return undefined; }
+    const end = start + query.length - 1;
+    const a = index.nodes.find(item => item.start <= start && start < item.end);
+    const b = index.nodes.find(item => item.start <= end && end < item.end);
+    if (!a || !b) { return undefined; }
+    const range = section.document.createRange() as Range;
+    range.setStart(a.node, a.offsets[start - a.start]);
+    range.setEnd(b.node, b.offsets[end - b.start] + 1);
+    // Check the mapped DOM range too: whitespace removal must not shift offsets.
+    if (normalizeNoteText(range.toString()) !== query) { return undefined; }
+    noteSearchCursor.set(book, {section: sectionIndex, start, endNode: b.node});
+    return {cfi: section.cfiFromRange(range), section: sectionIndex, endNode: b.node};
+  };
+
+  // Keep the prior start (not its end), so overlapping highlights remain valid.
+  for (let i = begin; i < items.length; i += 1) {
+    const result = await find(i, i === begin ? firstOffset : 0);
+    if (result) { return result; }
+  }
+  // Export order can differ from reading order; retry the earlier part once.
+  for (let i = 0; i <= begin; i += 1) {
+    if (i === begin && !firstOffset) { break; }
+    const result = await find(i, 0, i === begin ? firstOffset : Infinity);
+    if (result) { return result; }
+  }
+  return missing;
+}
+
+interface NoteTextNode {
+  node: Text;
+  start: number;
+  end: number;
+  offsets: number[];
+}
+interface NoteTextIndex {text: string; nodes: NoteTextNode[]; root: Node;}
+const noteTextIndexes = new WeakMap<Document, NoteTextIndex>();
+const noteSearchCursor = new WeakMap<ePub.Book, {section: number; start: number; endNode: Node}>();
+
+function normalizeNoteText(text: string): string {
+  return text.replace(/\s+/g, '');
+}
+
+function indexNoteText(document: Document): NoteTextIndex {
+  const root = document.body || document.querySelector('body') || document.documentElement;
+  const cached = noteTextIndexes.get(document);
+  if (cached && cached.root === root) { return cached; }
+  const nodes: NoteTextNode[] = [];
+  const chunks: string[] = [];
+  let length = 0;
+  const pending: Node[] = root ? [root] : [];
+  while (pending.length) {
+    const node = pending.pop();
+    if (node.nodeType === 1 && /^(script|style|noscript)$/i.test((node as Element).tagName)) { continue; }
+    if (node.nodeType === 3) {
+      const raw = node.textContent || '', offsets: number[] = [], characters: string[] = [];
+      // DOM Range offsets are UTF-16 code units, including surrogate pairs.
+      for (let i = 0; i < raw.length; i += 1) {
+        if (!/\s/.test(raw[i])) { offsets.push(i); characters.push(raw[i]); }
+      }
+      if (offsets.length) {
+        nodes.push({node: node as Text, start: length, end: length + offsets.length, offsets});
+        chunks.push(characters.join(''));
+        length += offsets.length;
+      }
+    } else {
+      for (let i = node.childNodes.length - 1; i >= 0; i -= 1) { pending.push(node.childNodes[i]); }
+    }
+  }
+  const index = {text: chunks.join(''), nodes, root};
+  noteTextIndexes.set(document, index);
+  return index;
 }

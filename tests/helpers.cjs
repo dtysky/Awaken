@@ -23,7 +23,7 @@ const note = (position, fields = {}) => ({
   page: position, modified: 10, ...fields
 });
 const config = fields => ({ts: 10, progress: 5, lastProgress: 5, notes: [], bookmarks: [], ...fields});
-function fixture(createClient, davPrefix = '') {
+function fixture(createClient, davPrefix = '', importOptions = {}) {
   const files = new Map();
   const remote = new Map([['Awaken/books.json', '[]']]);
   const etags = new Map();
@@ -61,11 +61,11 @@ function fixture(createClient, davPrefix = '') {
     }
   };
   const epub = require('epubjs');
-  const epubStub = {...epub, default: () => ({open: async () => {}, coverUrl: async () => null,
-    loaded: {metadata: Promise.resolve({title: 'Example a', creator: 'Author'})}, destroy() {}})};
+  const epubStub = {...epub, default: importOptions.epub || (() => ({open: async () => {}, coverUrl: async () => null,
+    loaded: {metadata: Promise.resolve({title: 'Example a', creator: 'Author'})}, destroy() {}}))};
   const sync = load('src/frontend/sync.ts');
   const {WebDAV} = load('src/frontend/webdav.ts', {
-    'webdav/web': {createClient: createClient || (() => client)}, epubjs: epubStub, 'js-md5': {hex: () => hash('a')},
+    'webdav/web': {createClient: createClient || (() => client)}, epubjs: epubStub, 'js-md5': importOptions.md5 || {hex: () => hash('a')},
     '../backend': {default: {worker, davPrefix}}, './utils': {fillBookCover: async () => {}},
     './reader/common': {}, './sync': sync
   });
@@ -77,7 +77,7 @@ function fixture(createClient, davPrefix = '') {
   function seedRemote(item, cfg = config()) {
     remote.set('Awaken/' + item.hash, null);
     remote.set(`Awaken/${item.hash}/config.json`, JSON.stringify(cfg));
-    remote.set(`Awaken/${item.hash}/${item.name}.epub`, new ArrayBuffer(8));
+    remote.set(`Awaken/${item.hash}/${item.remoteFile || item.name + '.epub'}`, new ArrayBuffer(8));
   }
   return {files, remote, puts, worker, client, seed, seedRemote, dav: new WebDAV(), WebDAV, etags};
 }

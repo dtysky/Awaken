@@ -9,7 +9,7 @@ import {proxy} from 'ajax-hook';
 import {IWorker, TBaseDir, TToastType} from '../../interfaces/IWorker';
 import {defaultThemes, ISystemSettings} from '../../interfaces';
 import {atob} from './utils';
-import {DAV_PREFIX} from '../common';
+import {DAV_PREFIX, webdavStatusText} from '../common';
 import {IBook} from '../../interfaces/protocols';
 
 const jsb = window['Awaken'];
@@ -207,7 +207,7 @@ if (!!jsb) {
           handler.resolve({
             config: config,
             status: res.status,
-            statusText: res.statusText,
+            statusText: webdavStatusText(res.status, data, res.statusText),
             headers: Object.fromEntries(res.headers.entries()),
             response: data
           });
